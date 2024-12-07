@@ -1,4 +1,5 @@
 import os
+import argparse
 import numpy as np
 import cv2
 import torch
@@ -491,14 +492,11 @@ def segment_lines(folder_path):
             cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
 
 
-import argparse
-# Create the parser
+
+# Create the arg parser
 parser = argparse.ArgumentParser(description="A simple script to process a path")
-# Add an argument for the path
 parser.add_argument('path', type=str, help='The path to folder which contains leaf images')
-# Parse the arguments
 args = parser.parse_args()
-# Extract and print the path
 folder_path = args.path
 
 #folder_path = "/mnt/cai-data/manuscript-annotation-tool/manuscripts/MV/leaves"
