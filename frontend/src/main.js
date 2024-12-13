@@ -1,4 +1,5 @@
 import './assets/main.css'
+import "dropzone/dist/dropzone.css";
 
 import { createApp } from 'vue'
 
