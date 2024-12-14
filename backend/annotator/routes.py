@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, request
 
 bp = Blueprint('main', __name__)
 
@@ -8,6 +8,9 @@ def hello():
 
 @bp.route('/upload-manuscript', methods=['POST'])
 def annotate():
-    print("Works")
+    uploaded_files = request.files
+    for file in request.files:
+        filename = request.files[file].filename
+        request.files[file].save(filename)
     return "", 200
 
