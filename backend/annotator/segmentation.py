@@ -493,11 +493,11 @@ def segment_lines(folder_path):
 
 
 
-# Create the arg parser
-parser = argparse.ArgumentParser(description="A simple script to process a path")
-parser.add_argument('path', type=str, help='The path to folder which contains leaf images')
-args = parser.parse_args()
-folder_path = args.path
+# # Create the arg parser
+# parser = argparse.ArgumentParser(description="A simple script to process a path")
+# parser.add_argument('path', type=str, help='The path to folder which contains leaf images')
+# args = parser.parse_args()
+# folder_path = args.path
 
-#folder_path = "/mnt/cai-data/manuscript-annotation-tool/manuscripts/MV/leaves"
-segment_lines(folder_path)
+# #folder_path = "/mnt/cai-data/manuscript-annotation-tool/manuscripts/MV/leaves"
+# segment_lines(folder_path)
