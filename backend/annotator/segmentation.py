@@ -16,6 +16,10 @@ from collections import namedtuple
 from packaging import version
 from collections import OrderedDict
 
+#GLOBAL VARIABLES
+lineheight_baseline_percentile = None
+binarize_threshold = None
+
 
 # Function Definitions
 def loadImage(img_file):
@@ -155,7 +159,6 @@ class VGG_FeatureExtractor(nn.Module):
 
 
 class Model(nn.Module):
-
     def __init__(self, input_channel, output_channel, hidden_size, num_class):
         super(Model, self).__init__()
         """ FeatureExtraction """
@@ -309,17 +312,17 @@ def load_images_from_folder(folder_path):
     return inp_images, file_names
 
 
-
 #%%
 def gen_bounding_boxes(det,peaks):
+  global lineheight_baseline_percentile, binarize_threshold
   img = np.uint8(det * 255)
-  _, img1 = cv2.threshold(img, 100, 255, cv2.THRESH_BINARY)
+  _, img1 = cv2.threshold(img, binarize_threshold, 255, cv2.THRESH_BINARY)
 
   # Find contours
   contours, _ = cv2.findContours(img1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
   bounding_boxes = []
-  max_height = np.percentile(peaks[1:]-peaks[:-1],80)
+  max_height = np.percentile(peaks[1:]-peaks[:-1],lineheight_baseline_percentile)
   # Extract bounding boxes from contours
   for contour in contours:
       x, y, w, h = cv2.boundingRect(contour)
@@ -420,8 +423,9 @@ def crop_img(img):
     return np.copy(img[row_start:row_end+1, col_start:col_end+1])
 
 def gen_line_images(img2,peaks,bounding_boxes,lines):
+  global lineheight_baseline_percentile
   line_images=[]
-  max_height_line = np.percentile(peaks[1:]-peaks[:-1],80)
+  max_height_line = np.percentile(peaks[1:]-peaks[:-1],lineheight_baseline_percentile)
   pad=int(max_height_line*0.2)
   for l in range(len(peaks)):
       # Filter bounding boxes for the current label
@@ -493,11 +497,16 @@ def segment_lines(folder_path):
 
 
 
-# # Create the arg parser
-# parser = argparse.ArgumentParser(description="A simple script to process a path")
-# parser.add_argument('path', type=str, help='The path to folder which contains leaf images')
-# args = parser.parse_args()
-# folder_path = args.path
+# Create the arg parser
+parser = argparse.ArgumentParser(description="A simple script to process a path")
+parser.add_argument('path', type=str, help='The path to folder which contains leaf images')
+parser.add_argument('--lineheight_baseline_percentile', type=int, default=80, help='Line height baseline is the 80 percentile value of all line heights')
+parser.add_argument('--binarize_threshold', type=int, default=100, help='Binarize threshold value (default: 100)')
 
-# #folder_path = "/mnt/cai-data/manuscript-annotation-tool/manuscripts/MV/leaves"
-# segment_lines(folder_path)
+args = parser.parse_args()
+folder_path = args.path
+lineheight_baseline_percentile = args.lineheight_baseline_percentile
+binarize_threshold = args.binarize_threshold
+
+#folder_path = "/mnt/cai-data/manuscript-annotation-tool/manuscripts/TEST/leaves"
+segment_lines(folder_path)
