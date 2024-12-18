@@ -16,9 +16,9 @@ from collections import namedtuple
 from packaging import version
 from collections import OrderedDict
 
-#GLOBAL VARIABLES
-lineheight_baseline_percentile = None
-binarize_threshold = None
+# #GLOBAL VARIABLES
+# lineheight_baseline_percentile = None
+# binarize_threshold = None
 
 
 # Function Definitions
@@ -313,8 +313,7 @@ def load_images_from_folder(folder_path):
 
 
 #%%
-def gen_bounding_boxes(det,peaks):
-  global lineheight_baseline_percentile, binarize_threshold
+def gen_bounding_boxes(det,peaks, lineheight_baseline_percentile, binarize_threshold):
   img = np.uint8(det * 255)
   _, img1 = cv2.threshold(img, binarize_threshold, 255, cv2.THRESH_BINARY)
 
@@ -422,8 +421,9 @@ def crop_img(img):
     # Crop the image using the identified indices
     return np.copy(img[row_start:row_end+1, col_start:col_end+1])
 
-def gen_line_images(img2,peaks,bounding_boxes,lines):
-  global lineheight_baseline_percentile
+def gen_line_images(img2,peaks,bounding_boxes,lines, lineheight_baseline_percentile):
+  # change here
+#   global lineheight_baseline_percentile
   line_images=[]
   max_height_line = np.percentile(peaks[1:]-peaks[:-1],lineheight_baseline_percentile)
   pad=int(max_height_line*0.2)
@@ -450,7 +450,7 @@ def gen_line_images(img2,peaks,bounding_boxes,lines):
   return line_images
 
 
-def segment_lines(folder_path):
+def segment_lines(folder_path, lineheight_baseline_percentile=80, binarize_threshold=100):
     print(folder_path)
     #m_name = folder_path.split('/')[-2]
     m_name = os.path.basename(os.path.dirname(folder_path))
@@ -485,10 +485,10 @@ def segment_lines(folder_path):
         ys = det.sum(axis=1)
         thres = 0.5 * ys.max()
         peaks, _ = find_peaks(ys, height=thres,distance=det.shape[0]/100,width=5)
-        bounding_boxes = gen_bounding_boxes(det,peaks)
+        bounding_boxes = gen_bounding_boxes(det,peaks, lineheight_baseline_percentile, binarize_threshold)
         lines,peaks1 = assign_lines(bounding_boxes,det)
         img2 = cv2.cvtColor(cv2.resize(image, det.shape[::-1]), cv2.COLOR_BGR2GRAY)
-        line_images = gen_line_images(img2,peaks1,bounding_boxes,lines)
+        line_images = gen_line_images(img2,peaks1,bounding_boxes,lines, lineheight_baseline_percentile)
 
         if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
             os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
@@ -498,15 +498,16 @@ def segment_lines(folder_path):
 
 
 # Create the arg parser
-parser = argparse.ArgumentParser(description="A simple script to process a path")
-parser.add_argument('path', type=str, help='The path to folder which contains leaf images')
-parser.add_argument('--lineheight_baseline_percentile', type=int, default=80, help='Line height baseline is the 80 percentile value of all line heights')
-parser.add_argument('--binarize_threshold', type=int, default=100, help='Binarize threshold value (default: 100)')
+# parser = argparse.ArgumentParser(description="A simple script to process a path")
+# parser.add_argument('path', type=str, help='The path to folder which contains leaf images')
+# parser.add_argument('--lineheight_baseline_percentile', type=int, default=80, help='Line height baseline is the 80 percentile value of all line heights')
+# parser.add_argument('--binarize_threshold', type=int, default=100, help='Binarize threshold value (default: 100)')
 
-args = parser.parse_args()
-folder_path = args.path
-lineheight_baseline_percentile = args.lineheight_baseline_percentile
-binarize_threshold = args.binarize_threshold
+# args = parser.parse_args()
+# folder_path = args.path
+# lineheight_baseline_percentile = args.lineheight_baseline_percentile
+# binarize_threshold = args.binarize_threshold
 
-#folder_path = "/mnt/cai-data/manuscript-annotation-tool/manuscripts/TEST/leaves"
-segment_lines(folder_path)
+# #folder_path = "/mnt/cai-data/manuscript-annotation-tool/manuscripts/TEST/leaves"
+# segment_lines(folder_path)
+# %%
