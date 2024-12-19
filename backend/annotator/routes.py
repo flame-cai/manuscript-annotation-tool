@@ -1,6 +1,7 @@
 import os
 
 from flask import Blueprint, request
+
 from annotator.segmentation import segment_lines
 from annotator.recognition.recognition import recognise_characters
 
@@ -10,7 +11,6 @@ bp = Blueprint("main", __name__)
 @bp.route("/")
 def hello():
     return "Sanskrit Manuscript Annotation Tool"
-
 
 @bp.route("/upload-manuscript", methods=["POST"])
 def annotate():
