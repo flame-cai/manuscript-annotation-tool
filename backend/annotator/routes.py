@@ -1,23 +1,26 @@
 import os
 
-from flask import Blueprint, request
+from flask import Blueprint, request, send_from_directory
 
 from annotator.segmentation import segment_lines
 from annotator.recognition.recognition import recognise_characters
 
 bp = Blueprint("main", __name__)
 
+BASE_PATH = "/mnt/cai-data/manuscript-annotation-tool/manuscripts"
 
 @bp.route("/")
 def hello():
     return "Sanskrit Manuscript Annotation Tool"
 
+@bp.route('/lines/<string:manuscript_name>/<string:page>/<string:line>')
+def serve_line_image(manuscript_name, page, line):
+    return send_from_directory(os.path.join(BASE_PATH, manuscript_name, "lines", page), line + ".jpg")
+
 @bp.route("/upload-manuscript", methods=["POST"])
 def annotate():
     uploaded_files = request.files
     manuscript_name = request.form["manuscript_name"]
-
-    BASE_PATH = "/mnt/cai-data/manuscript-annotation-tool/manuscripts"
     folder_path = os.path.join(BASE_PATH, manuscript_name)
     leaves_folder_path = os.path.join(folder_path, "leaves")
 
