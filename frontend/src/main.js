@@ -1,6 +1,5 @@
 import './assets/main.scss'
 import "dropzone/dist/dropzone.css";
-import * as bootstrap from 'bootstrap'
 
 import { createApp } from 'vue'
 
