@@ -11,9 +11,14 @@ onMounted(()=>{
     autoProcessQueue: false,
     parallelUploads: Infinity,
   })
+  uploadForm.value.on("completemultiple", ()=>{
+	emit('upload')
+  })
 })
 
 const UPLOAD_URL = import.meta.env.VITE_BACKEND_URL + "/upload-manuscript"
+
+const emit = defineEmits(['upload',])
 
 </script>
 

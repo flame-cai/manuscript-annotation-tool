@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
-import UploadForm from './UploadForm.vue'
+import UploadForm from './components/UploadForm.vue'
+import AnnotationSection from './components/AnnotationSection.vue';
 
 function setThemeBasedOnPreference() {
     const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -20,7 +21,8 @@ const isUploaded = ref(false);
     <h1>Manuscript Annotation Tool</h1>
   </header>
   <main>
-    <UploadForm v-if="!isUploaded"/>
+    <UploadForm v-if="!isUploaded" @upload="isUploaded = true"/>
+    <AnnotationSection v-else />
   </main>
 </template>
 
