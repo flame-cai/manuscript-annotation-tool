@@ -25,6 +25,7 @@ def serve_line_image(manuscript_name, page, line):
 def annotate():
     uploaded_files = request.files
     manuscript_name = request.form["manuscript_name"]
+    model = request.form["model"]
     folder_path = os.path.join(BASE_PATH, manuscript_name)
     leaves_folder_path = os.path.join(folder_path, "leaves")
 
@@ -38,6 +39,6 @@ def annotate():
         request.files[file].save(os.path.join(leaves_folder_path, filename))
 
     segment_lines(os.path.join(folder_path, "leaves"))
-    lines = recognise_characters(folder_path)
+    lines = recognise_characters(folder_path, model)
 
     return lines, 200
