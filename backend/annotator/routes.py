@@ -13,6 +13,10 @@ BASE_PATH = "/mnt/cai-data/manuscript-annotation-tool/manuscripts"
 def hello():
     return "Sanskrit Manuscript Annotation Tool"
 
+@bp.route('/models')
+def get_models():
+    return os.listdir("/mnt/cai-data/manuscript-annotation-tool/models/recognition")
+
 @bp.route('/lines/<string:manuscript_name>/<string:page>/<string:line>')
 def serve_line_image(manuscript_name, page, line):
     return send_from_directory(os.path.join(BASE_PATH, manuscript_name, "lines", page), line + ".jpg")
@@ -21,6 +25,7 @@ def serve_line_image(manuscript_name, page, line):
 def annotate():
     uploaded_files = request.files
     manuscript_name = request.form["manuscript_name"]
+    model = request.form["model"]
     folder_path = os.path.join(BASE_PATH, manuscript_name)
     leaves_folder_path = os.path.join(folder_path, "leaves")
 
@@ -34,6 +39,6 @@ def annotate():
         request.files[file].save(os.path.join(leaves_folder_path, filename))
 
     segment_lines(os.path.join(folder_path, "leaves"))
-    lines = recognise_characters(folder_path)
+    lines = recognise_characters(folder_path, model)
 
     return lines, 200

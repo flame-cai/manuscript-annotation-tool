@@ -8,14 +8,14 @@ from annotator.models import db, RecognitionLog
 def get_subfolders(folder_path):
     return [os.path.join(folder_path, subfolder) for subfolder in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, subfolder))]
 
-def recognise_characters(folder_path):
+def recognise_characters(folder_path, model):
     lines_of_all_pages = []
     lines_folder_path = os.path.join(folder_path, "lines")
     page_subfolder_paths = get_subfolders(lines_folder_path)
     for page_subfolder_path in page_subfolder_paths:
         lines_of_one_page = recognise_lines(
             image_folder=page_subfolder_path,
-            saved_model="/mnt/cai-data/manuscript-annotation-tool/models/segmentation/best_norm_ED.pth",
+            saved_model=f"/mnt/cai-data/manuscript-annotation-tool/models/recognition/{model}",
             transformation=None,
             feature_extraction="ResNet",
             sequence_modeling="BiLSTM",
