@@ -6,6 +6,19 @@ from datetime import datetime
 from annotator.recognition.demo import recognise_lines
 from annotator.models import db, RecognitionLog
 
+def get_filename_without_extension(file_path):
+    """
+    Extracts the filename without extension from a given file path.
+
+    :param file_path: str - The full file path.
+    :return: str - The filename without the extension.
+    """
+    # Extract the base name of the file
+    base_name = os.path.basename(file_path)
+    # Remove the file extension
+    file_name, _ = os.path.splitext(base_name)
+    return file_name
+
 def get_subfolders(folder_path):
     return [subfolder for subfolder in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, subfolder))]
 
@@ -33,12 +46,14 @@ def recognise_characters(folder_path, model, manuscript_name):
         for line in lines_of_one_page:
             line["manuscript_name"] = manuscript_name
             line["page"] = page_subfolder
+            line["line"] = get_filename_without_extension(line["image_path"])
             log_entry = RecognitionLog(
                 image_path=line["image_path"],
                 predicted_label=line["predicted_label"],
                 confidence_score=line["confidence_score"],
                 manuscript_name=manuscript_name,
                 page=page_subfolder,
+                line=line["line"],
                 timestamp=datetime.now()
             )
             db.session.add(log_entry)
