@@ -12,6 +12,11 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
     setThemeBasedOnPreference();
 });
 
+function uploaded(response) {
+  recognitions.value = response;
+  isUploaded.value = true; 
+}
+
 const isUploaded = ref(false);
 
 </script>

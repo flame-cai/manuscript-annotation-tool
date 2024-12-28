@@ -20,8 +20,8 @@ onMounted(() => {
     autoProcessQueue: false,
     parallelUploads: Infinity,
   })
-  uploadForm.value.on('completemultiple', () => {
-    emit('upload')
+  uploadForm.value.on('completemultiple', function(files) {
+    emit('upload', JSON.parse(files[0].xhr.response))
   })
 })
 
