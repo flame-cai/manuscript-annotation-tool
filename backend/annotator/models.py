@@ -15,4 +15,6 @@ class RecognitionLog(db.Model):
     predicted_label: Mapped[str]
     confidence_score: Mapped[float]
     timestamp: Mapped[datetime]
+    manuscript_name: Mapped[str]
+    page: Mapped[str]
 

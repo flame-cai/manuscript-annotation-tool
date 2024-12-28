@@ -39,6 +39,6 @@ def annotate():
         request.files[file].save(os.path.join(leaves_folder_path, filename))
 
     segment_lines(os.path.join(folder_path, "leaves"))
-    lines = recognise_characters(folder_path, model)
+    lines = recognise_characters(folder_path, model, manuscript_name)
 
     return lines, 200
