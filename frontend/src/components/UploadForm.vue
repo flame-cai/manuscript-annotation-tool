@@ -9,10 +9,10 @@ const models = ref([])
 const modelSelected = ref('')
 
 fetch(import.meta.env.VITE_BACKEND_URL + '/models')
-.then((response)=>response.json())
-.then((object) => {
-	models.value = object;
-})
+  .then((response) => response.json())
+  .then((object) => {
+    models.value = object
+  })
 
 onMounted(() => {
   uploadForm.value = new Dropzone('#upload-form', {
@@ -20,7 +20,7 @@ onMounted(() => {
     autoProcessQueue: false,
     parallelUploads: Infinity,
   })
-  uploadForm.value.on('completemultiple', function(files) {
+  uploadForm.value.on('completemultiple', function (files) {
     emit('upload', JSON.parse(files[0].xhr.response))
   })
 })
@@ -38,14 +38,14 @@ const emit = defineEmits(['upload'])
   <div class="mb-3">
     <label for="model" class="form-label">Model</label>
     <select class="form-select" id="model" v-model="modelSelected" placeholder="Select a model">
-		<option disabled hidden value="" >Select a model</option>
-		<option v-for="model in models" :key="model" :value="model">{{ model }}</option>
-	</select>
+      <option disabled hidden value="">Select a model</option>
+      <option v-for="model in models" :key="model" :value="model">{{ model }}</option>
+    </select>
   </div>
   <form :action="UPLOAD_URL" class="dropzone" id="upload-form">
     <div class="previews"></div>
     <input type="hidden" name="manuscript_name" :value="manuscriptName" />
-	<input type="hidden" name="model" :value="modelSelected" />
+    <input type="hidden" name="model" :value="modelSelected" />
   </form>
   <button @click="uploadForm.processQueue()" class="btn btn-primary">Submit</button>
 </template>

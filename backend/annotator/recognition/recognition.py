@@ -23,7 +23,7 @@ def get_subfolders(folder_path):
     return [subfolder for subfolder in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, subfolder))]
 
 def recognise_characters(folder_path, model, manuscript_name):
-    lines_of_all_pages = []
+    lines_of_all_pages = {}
     lines_folder_path = os.path.join(folder_path, "lines")
     page_subfolders = get_subfolders(lines_folder_path)
     for page_subfolder in page_subfolders:
@@ -58,5 +58,5 @@ def recognise_characters(folder_path, model, manuscript_name):
             )
             db.session.add(log_entry)
             db.session.commit()
-        lines_of_all_pages.append(lines_of_one_page)
+        lines_of_all_pages[page_subfolder] = lines_of_one_page
     return lines_of_all_pages
