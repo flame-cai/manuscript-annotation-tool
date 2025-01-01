@@ -42,3 +42,7 @@ def annotate():
     lines = recognise_characters(folder_path, model, manuscript_name)
 
     return lines, 200
+
+@bp.route('/fine-tune', methods=["POST"])
+def finetune():
+    return "Success", 200

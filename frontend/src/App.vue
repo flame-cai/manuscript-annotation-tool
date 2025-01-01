@@ -1,9 +1,12 @@
 <script setup>
 import { ref } from 'vue';
 import UploadForm from './components/UploadForm.vue'
-import AnnotationSection from './components/AnnotationSection.vue';
+import AnnotationSection from './views/AnnotationSection.vue';
+import { useAnnotationStore } from './stores/annotationStore';
 
 const recognitions = ref([])
+
+const annotationStore = useAnnotationStore();
 
 function setThemeBasedOnPreference() {
     const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -17,6 +20,7 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 
 function uploaded(response) {
   recognitions.value = response;
+  annotationStore.request[Object.values(response)[0][0].manuscript_name] = {};
   isUploaded.value = true; 
 }
 
