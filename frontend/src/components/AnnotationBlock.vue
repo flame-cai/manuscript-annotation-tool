@@ -8,7 +8,7 @@ const BASE_PATH = 'http://localhost:5000/line-images'
 const props = defineProps(['line']);
 const annotationStore = useAnnotationStore();
 
-console.log(props.line);
+let isEntryCreated = false;
 
 const devanagari = ref(props.line.predicted_label);
 const hk = ref(Sanscript.t(props.line.predicted_label, 'devanagari', 'hk'))
@@ -19,7 +19,11 @@ watch(hk, function() {
 
 watch(devanagari, function(){
     hk.value = Sanscript.t(devanagari.value, 'devanagari', 'hk');
-    annotationStore.request[props.line.manuscript_name][props.line.page][props.line.line] = devanagari.value;
+    if (!isEntryCreated) {
+        annotationStore.request[props.line.manuscript_name][props.line.page][props.line.line] = {};
+        isEntryCreated = true;
+    }
+    annotationStore.request[props.line.manuscript_name][props.line.page][props.line.line]["ground_truth"] = devanagari.value;
 })
 
 </script>
