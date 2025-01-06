@@ -19,3 +19,12 @@ class RecognitionLog(db.Model):
     image_path: Mapped[str]
     timestamp: Mapped[datetime]
 
+class UserAnnotationLog(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    manuscript_name: Mapped[str]
+    page: Mapped[str]
+    line: Mapped[str]
+    ground_truth: Mapped[str]
+    levenshtein_distance: Mapped[int]
+    image_path: Mapped[str]
+    timestamp: Mapped[datetime]
