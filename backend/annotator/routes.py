@@ -4,6 +4,7 @@ from flask import Blueprint, request, send_from_directory
 
 from annotator.segmentation import segment_lines
 from annotator.recognition.recognition import recognise_characters
+from annotator.recognition.finetune import finetune
 
 bp = Blueprint("main", __name__)
 
@@ -44,5 +45,6 @@ def annotate():
     return lines, 200
 
 @bp.route('/fine-tune', methods=["POST"])
-def finetune():
+def do_finetune():
+    finetune(request.json)
     return "Success", 200

@@ -57,6 +57,6 @@ def recognise_characters(folder_path, model, manuscript_name):
                 timestamp=datetime.now()
             )
             db.session.add(log_entry)
-            db.session.commit()
+        db.session.commit()
         lines_of_all_pages[page_subfolder] = lines_of_one_page
     return lines_of_all_pages

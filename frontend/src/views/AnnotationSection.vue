@@ -8,6 +8,7 @@ const annotationStore = useAnnotationStore();
 const page = ref(Object.keys(props.recognitions).sort()[0]);
 
 function uploadGroundTruth() {
+  annotationStore.calculateLevenshteinDistances();
   fetch(import.meta.env.VITE_BACKEND_URL + "/fine-tune", {
     method: 'POST',
     headers: {
