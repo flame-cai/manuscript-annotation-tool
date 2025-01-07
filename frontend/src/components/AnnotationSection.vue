@@ -1,3 +1,0 @@
-<template>
-    Annotation Section
-</template>

@@ -11,8 +11,11 @@ db = SQLAlchemy(model_class=Base)
 
 class RecognitionLog(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    image_path: Mapped[str]
     predicted_label: Mapped[str]
     confidence_score: Mapped[float]
+    manuscript_name: Mapped[str]
+    page: Mapped[str]
+    line: Mapped[str]
+    image_path: Mapped[str]
     timestamp: Mapped[datetime]
 
