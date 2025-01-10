@@ -4,7 +4,7 @@ from flask import Blueprint, request, send_from_directory
 
 from annotator.segmentation import segment_lines
 from annotator.recognition.recognition import recognise_characters
-from annotator.recognition.finetune import finetune
+from annotator.finetune.finetune import finetune
 
 bp = Blueprint("main", __name__)
 
