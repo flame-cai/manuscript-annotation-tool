@@ -532,7 +532,7 @@ def segment_lines(folder_path, lineheight_baseline_percentile=80, binarize_thres
     for _img,_filename in zip(out_images,file_names):
         cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/heatmaps/{_filename}',255*_img)
     for points_twoD,_filename in zip(points,file_names):
-        np.savetxt(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/points-2D/{os.path.splitext(_filename)[0]}.txt', points_twoD, fmt='%d')
+        np.savetxt(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/points-2D/{os.path.splitext(_filename)[0]}__points.txt', points_twoD, fmt='%d')
     
     print(f"{time.time()-st:.2f} seconds elapsed.....")
 
