@@ -3,7 +3,7 @@ import { ref, watch } from 'vue';
 import Sanscript from '@indic-transliteration/sanscript';
 import { useAnnotationStore } from '@/stores/annotationStore';
 
-const BASE_PATH = 'http://localhost:5001/line-images'
+const BASE_PATH = 'http://localhost:5000/line-images'
 
 const props = defineProps(['line']);
 const annotationStore = useAnnotationStore();
