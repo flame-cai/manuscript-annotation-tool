@@ -4,6 +4,7 @@ import AnnotationPage from '@/components/AnnotationPage.vue';
 import { useAnnotationStore } from '@/stores/annotationStore';
 
 const props = defineProps(['recognitions'])
+const emit = defineEmits(['annotated'])
 const annotationStore = useAnnotationStore();
 const page = ref(Object.keys(props.recognitions).sort()[0]);
 
@@ -15,6 +16,8 @@ function uploadGroundTruth() {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(annotationStore.request)
+  }).then(()=>{
+    emit('annotated');
   })
 }
 

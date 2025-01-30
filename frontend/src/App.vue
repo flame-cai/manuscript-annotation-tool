@@ -47,7 +47,7 @@ const isUploaded = ref(false);
   </header>
   <main>
     <UploadForm v-if="!isUploaded" @upload="uploaded"/>
-    <AnnotationSection :recognitions="recognitions" v-else />
+    <AnnotationSection :recognitions="recognitions"  @annotated="isUploaded = false" v-else />
   </main>
 </template>
 
