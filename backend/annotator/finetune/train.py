@@ -29,7 +29,7 @@ def count_parameters(model):
     print(f"Total Trainable Params: {total_params}")
     return total_params
 
-def train(opt, show_number = 2, amp=False):
+def train(opt, manuscript_name, show_number = 2, amp=False ):
     """ dataset preparation """
     if not opt.data_filtering_off:
         print('Filtering the images containing characters which are not in opt.character')
@@ -242,10 +242,10 @@ def train(opt, show_number = 2, amp=False):
                 # keep best accuracy model (on valid dataset)
                 if current_accuracy > best_accuracy:
                     best_accuracy = current_accuracy
-                    torch.save(model.state_dict(), f'./saved_models/{opt.experiment_name}/best_accuracy.pth')
+                    torch.save(model.state_dict(), f'/mnt/cai-data/manuscript-annotation-tool/models/recognition/{manuscript_name}_best_accuracy.pth')
                 if current_norm_ED > best_norm_ED:
                     best_norm_ED = current_norm_ED
-                    torch.save(model.state_dict(), f'./saved_models/{opt.experiment_name}/best_norm_ED.pth')
+                    torch.save(model.state_dict(), f'/mnt/cai-data/manuscript-annotation-tool/models/recognition/{manuscript_name}_best_norm_ED.pth')
                 best_model_log = f'{"Best_accuracy":17s}: {best_accuracy:0.3f}, {"Best_norm_ED":17s}: {best_norm_ED:0.4f}'
 
                 loss_model_log = f'{loss_log}\n{current_model_log}\n{best_model_log}'
@@ -274,7 +274,7 @@ def train(opt, show_number = 2, amp=False):
         # save model per 1e+4 iter.
         if (i + 1) % 1e+4 == 0:
             torch.save(
-                model.state_dict(), f'./saved_models/{opt.experiment_name}/iter_{i+1}.pth')
+                model.state_dict(), f'/mnt/cai-data/manuscript-annotation-tool/{opt.experiment_name}/iter_{i+1}.pth')
 
         if i == opt.num_iter:
             print('end the training')

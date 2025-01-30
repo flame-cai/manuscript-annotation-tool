@@ -34,6 +34,9 @@ def get_config(file_path):
 
 def finetune(annotations, app_context):
     app_context.push()
+
+    opt = get_config(os.path.join("annotator", "finetune", "config_files", "config.yml"))
+
     TEMP_FOLDER = "temp"
     TRAIN_FOLDER = os.path.join(TEMP_FOLDER, "train")
     VAL_FOLDER = os.path.join(TEMP_FOLDER, "val")
@@ -90,5 +93,5 @@ def finetune(annotations, app_context):
                     csvwriter = csv.writer(csvfile)
                     csvwriter.writerow([filename, ground_truth])
     db.session.commit()
-    opt = get_config(os.path.join("annotator", "finetune", "config_files", "config.yml"))
-    train(opt, amp=False)
+    
+    train(opt, amp=False, manuscript_name=list(annotations.keys())[0])
