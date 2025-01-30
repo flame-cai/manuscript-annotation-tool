@@ -6,6 +6,7 @@ import yaml
 import pandas as pd
 
 from datetime import datetime
+from flask import current_app
 
 from annotator.finetune.utils import AttrDict
 from annotator.finetune.train import train
@@ -31,7 +32,8 @@ def get_config(file_path):
     os.makedirs(f'./saved_models/{opt.experiment_name}', exist_ok=True)
     return opt
 
-def finetune(annotations):
+def finetune(annotations, app_context):
+    app_context.push()
     TEMP_FOLDER = "temp"
     TRAIN_FOLDER = os.path.join(TEMP_FOLDER, "train")
     VAL_FOLDER = os.path.join(TEMP_FOLDER, "val")
