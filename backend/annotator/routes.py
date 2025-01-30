@@ -1,10 +1,11 @@
 import os
+import threading
 
-from flask import Blueprint, request, send_from_directory
+from flask import Blueprint, request, send_from_directory, current_app
 
 from annotator.segmentation import segment_lines
 from annotator.recognition.recognition import recognise_characters
-from annotator.recognition.finetune import finetune
+from annotator.finetune.finetune import finetune
 
 bp = Blueprint("main", __name__)
 
@@ -46,5 +47,7 @@ def annotate():
 
 @bp.route('/fine-tune', methods=["POST"])
 def do_finetune():
-    finetune(request.json)
+    thread = threading.Thread(target=finetune, args=(request.json, current_app.app_context()))
+    thread.start()
+    # finetune(request.json)
     return "Success", 200
