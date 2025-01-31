@@ -33,7 +33,7 @@ function uploaded(response) {
       annotationStore.annotations[manuscript_name][page][line_name]["confidence_score"] = response[page][line]["confidence_score"]
     }
   }
-  annotationStore.request[manuscript_name] = {};
+  annotationStore.userAnnotations.push({"manuscript_name": manuscript_name, "annotations": {}});
   isUploaded.value = true; 
 }
 

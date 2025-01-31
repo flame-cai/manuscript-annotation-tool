@@ -7,6 +7,7 @@ const props = defineProps(['recognitions'])
 const emit = defineEmits(['annotated'])
 const annotationStore = useAnnotationStore();
 const page = ref(Object.keys(props.recognitions).sort()[0]);
+// const modelName = ref(annotationStore.modelName);
 
 function uploadGroundTruth() {
   annotationStore.calculateLevenshteinDistances();
@@ -15,7 +16,7 @@ function uploadGroundTruth() {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(annotationStore.request)
+    body: JSON.stringify(annotationStore.userAnnotations)
   }).then(()=>{
     emit('annotated');
   })
@@ -24,7 +25,10 @@ function uploadGroundTruth() {
 </script>
 
 <template>
-  <h2>Annotation Section</h2>
+  <div class="mb-3">
+    <label for="model-name" class="form-label">Model name</label>
+    <input class="form-control" placeholder="Name your model..." v-model="annotationStore.modelName">
+  </div>
   <div class="mb-3">
     <button class="btn btn-primary" @click="uploadGroundTruth">Fine-tune</button>
   </div>

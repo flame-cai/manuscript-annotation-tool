@@ -20,10 +20,10 @@ watch(hk, function() {
 watch(devanagari, function(){
     hk.value = Sanscript.t(devanagari.value, 'devanagari', 'hk');
     if (!isEntryCreated) {
-        annotationStore.request[props.line.manuscript_name][props.line.page][props.line.line] = {};
+        annotationStore.userAnnotations[0]["annotations"][props.line.page][props.line.line] = {};
         isEntryCreated = true;
     }
-    annotationStore.request[props.line.manuscript_name][props.line.page][props.line.line]["ground_truth"] = devanagari.value;
+    annotationStore.userAnnotations[0]["annotations"][props.line.page][props.line.line]["ground_truth"] = devanagari.value;
 })
 
 </script>

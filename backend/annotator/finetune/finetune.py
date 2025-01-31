@@ -54,44 +54,45 @@ def finetune(annotations, app_context):
                 csvwriter = csv.writer(csvfile)
                 csvwriter.writerow(["filename", "words"])
     
+    manuscript_name = annotations[0]['manuscript_name']
+    annotations = annotations[0]['annotations']
 
-    for manuscript_name in annotations:
-        for page in annotations[manuscript_name]:
-            for line in annotations[manuscript_name][page]:
-                ground_truth = annotations[manuscript_name][page][line]["ground_truth"]
-                image_path = os.path.join(BASE_PATH, manuscript_name, "lines", page, line + ".jpg")
-                filename = os.path.basename(image_path)
+    for page in annotations:
+        for line in annotations[page]:
+            ground_truth = annotations[page][line]["ground_truth"]
+            image_path = os.path.join(BASE_PATH, manuscript_name, "lines", page, line + ".jpg")
+            filename = os.path.basename(image_path)
 
-                # Create log entry
-                log_entry = UserAnnotationLog(
-                    manuscript_name=manuscript_name,
-                    page=page,
-                    line=line,
-                    ground_truth=ground_truth,
-                    levenshtein_distance=annotations[manuscript_name][page][line]["levenshtein_distance"],
-                    image_path=image_path,
-                    timestamp=datetime.now(),
-                )
-                db.session.add(log_entry)
+            # Create log entry
+            log_entry = UserAnnotationLog(
+                manuscript_name=manuscript_name,
+                page=page,
+                line=line,
+                ground_truth=ground_truth,
+                levenshtein_distance=annotations[page][line]["levenshtein_distance"],
+                image_path=image_path,
+                timestamp=datetime.now(),
+            )
+            db.session.add(log_entry)
 
-                # Randomly assign to train or val (80% train, 20% val)
-                if random.random() < 0.8:
-                    target_folder = TRAIN_FOLDER
-                    target_csv = TRAIN_CSV_FILE
-                else:
-                    target_folder = VAL_FOLDER
-                    target_csv = VAL_CSV_FILE
+            # Randomly assign to train or val (80% train, 20% val)
+            if random.random() < 0.8:
+                target_folder = TRAIN_FOLDER
+                target_csv = TRAIN_CSV_FILE
+            else:
+                target_folder = VAL_FOLDER
+                target_csv = VAL_CSV_FILE
 
-                # Copy the image to the appropriate folder
-                try:
-                    shutil.copy(image_path, target_folder)
-                except FileNotFoundError:
-                    print(f"Image not found: {image_path}")
+            # Copy the image to the appropriate folder
+            try:
+                shutil.copy(image_path, target_folder)
+            except FileNotFoundError:
+                print(f"Image not found: {image_path}")
 
-                # Append to the appropriate CSV file
-                with open(target_csv, mode='a', newline='') as csvfile:
-                    csvwriter = csv.writer(csvfile)
-                    csvwriter.writerow([filename, ground_truth])
+            # Append to the appropriate CSV file
+            with open(target_csv, mode='a', newline='') as csvfile:
+                csvwriter = csv.writer(csvfile)
+                csvwriter.writerow([filename, ground_truth])
     db.session.commit()
     
-    train(opt, amp=False, manuscript_name=list(annotations.keys())[0])
+    train(opt, amp=False, manuscript_name=manuscript_name)
