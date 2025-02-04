@@ -59,8 +59,8 @@ def heatmap_to_pointcloud(heatmap, min_peak_value=0.3, min_distance=10):
     for peak_idx in range(1, num_peaks + 1):
         # Get peak location
         peak_y, peak_x = np.where(labeled_peaks == peak_idx)[0][0], np.where(labeled_peaks == peak_idx)[1][0]
-        #points.append([peak_x, peak_y])
-        points.append([peak_x, height - 1 - peak_y])  # This line is modified
+        points.append([peak_x, peak_y])
+        #points.append([peak_x, height - 1 - peak_y])  # This line is modified
 
     return np.array(points)
 
@@ -545,8 +545,9 @@ def segment_lines(folder_path, lineheight_baseline_percentile=80, binarize_thres
         try:
             peaks, _ = find_peaks(ys, height=thres,distance=det.shape[0]/100,width=5)
             bounding_boxes = gen_bounding_boxes(det,peaks, lineheight_baseline_percentile, binarize_threshold)
-            lines,peaks1 = assign_lines(bounding_boxes,det)
             img2 = cv2.cvtColor(cv2.resize(image, det.shape[::-1]), cv2.COLOR_BGR2GRAY)
+            
+            lines,peaks1 = assign_lines(bounding_boxes,det)
             line_images = gen_line_images(img2,peaks1,bounding_boxes,lines, lineheight_baseline_percentile)
 
             if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
@@ -556,7 +557,11 @@ def segment_lines(folder_path, lineheight_baseline_percentile=80, binarize_thres
         except:
             with open(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/points-2D/failures.txt', 'a') as file:
                 file.write(f"{file_name}")
-                
+
+            # if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
+            #     os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
+            # for i in range(len(line_images)):
+            #     cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
 
 
 # Create the arg parser
