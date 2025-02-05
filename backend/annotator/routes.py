@@ -45,9 +45,13 @@ def annotate():
 
     return lines, 200
 
+def finetune_context(data, app_context):
+    app_context.push()
+    finetune(data)
+
 @bp.route('/fine-tune', methods=["POST"])
 def do_finetune():
-    thread = threading.Thread(target=finetune, args=(request.json, current_app.app_context()))
+    thread = threading.Thread(target=finetune_context, args=(request.json, current_app.app_context()))
     thread.start()
     # finetune(request.json)
     return "Success", 200

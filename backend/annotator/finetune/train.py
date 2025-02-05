@@ -39,7 +39,7 @@ def train(opt, manuscript_name, show_number = 2, amp=False ):
     opt.batch_ratio = opt.batch_ratio.split('-')
     train_dataset = Batch_Balanced_Dataset(opt)
 
-    log = open(f'./saved_models/{opt.experiment_name}/log_dataset.txt', 'a', encoding="utf8")
+    log = open(f'./saved_models/{opt.model_name}/log_dataset.txt', 'a', encoding="utf8")
     AlignCollate_valid = AlignCollate(imgH=opt.imgH, imgW=opt.imgW, keep_ratio_with_pad=opt.PAD, contrast_adjust=opt.contrast_adjust)
     valid_dataset, valid_dataset_log = hierarchical_dataset(root=opt.valid_data, opt=opt)
     valid_loader = torch.utils.data.DataLoader(
@@ -146,7 +146,7 @@ def train(opt, manuscript_name, show_number = 2, amp=False ):
 
     """ final options """
     # print(opt)
-    with open(f'./saved_models/{opt.experiment_name}/opt.txt', 'a', encoding="utf8") as opt_file:
+    with open(f'./saved_models/{opt.model_name}/opt.txt', 'a', encoding="utf8") as opt_file:
         opt_log = '------------ Options -------------\n'
         args = vars(opt)
         for k, v in args.items():
@@ -226,7 +226,7 @@ def train(opt, manuscript_name, show_number = 2, amp=False ):
             t1=time.time()
             elapsed_time = time.time() - start_time
             # for log
-            with open(f'./saved_models/{opt.experiment_name}/log_train.txt', 'a', encoding="utf8") as log:
+            with open(f'./saved_models/{opt.model_name}/log_train.txt', 'a', encoding="utf8") as log:
                 model.eval()
                 with torch.no_grad():
                     valid_loss, current_accuracy, current_norm_ED, preds, confidence_score, labels,\
@@ -242,10 +242,10 @@ def train(opt, manuscript_name, show_number = 2, amp=False ):
                 # keep best accuracy model (on valid dataset)
                 if current_accuracy > best_accuracy:
                     best_accuracy = current_accuracy
-                    torch.save(model.state_dict(), f'/mnt/cai-data/manuscript-annotation-tool/models/recognition/{manuscript_name}_best_accuracy.pth')
+                    torch.save(model.state_dict(), f'/mnt/cai-data/manuscript-annotation-tool/models/recognition/{opt.model_name}_best_accuracy.pth')
                 if current_norm_ED > best_norm_ED:
                     best_norm_ED = current_norm_ED
-                    torch.save(model.state_dict(), f'/mnt/cai-data/manuscript-annotation-tool/models/recognition/{manuscript_name}_best_norm_ED.pth')
+                    torch.save(model.state_dict(), f'/mnt/cai-data/manuscript-annotation-tool/models/recognition/{opt.model_name}_best_norm_ED.pth')
                 best_model_log = f'{"Best_accuracy":17s}: {best_accuracy:0.3f}, {"Best_norm_ED":17s}: {best_norm_ED:0.4f}'
 
                 loss_model_log = f'{loss_log}\n{current_model_log}\n{best_model_log}'
@@ -274,7 +274,7 @@ def train(opt, manuscript_name, show_number = 2, amp=False ):
         # save model per 1e+4 iter.
         if (i + 1) % 1e+4 == 0:
             torch.save(
-                model.state_dict(), f'/mnt/cai-data/manuscript-annotation-tool/{opt.experiment_name}/iter_{i+1}.pth')
+                model.state_dict(), f'/mnt/cai-data/manuscript-annotation-tool/models/recognition/{opt.model_name}/iter_{i+1}.pth')
 
         if i == opt.num_iter:
             print('end the training')

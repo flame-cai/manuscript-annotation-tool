@@ -45,8 +45,11 @@ def recognise_characters(folder_path, model, manuscript_name):
         )
         for line in lines_of_one_page:
             line["manuscript_name"] = manuscript_name
+            line["selected_model"] = model
             line["page"] = page_subfolder
             line["line"] = get_filename_without_extension(line["image_path"])
+
+            # Add model name to Log
             log_entry = RecognitionLog(
                 image_path=line["image_path"],
                 predicted_label=line["predicted_label"],

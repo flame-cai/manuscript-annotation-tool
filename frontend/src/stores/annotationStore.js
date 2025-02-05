@@ -2,8 +2,9 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useAnnotationStore = defineStore('annotations', () => {
+  const modelName = ref();
   const annotations = ref({})
-  const request = ref({})
+  const userAnnotations = ref([])
 
   function levenshteinDistance(str1 = '', str2 = '') {
     const track = Array(str2.length + 1)
@@ -29,18 +30,31 @@ export const useAnnotationStore = defineStore('annotations', () => {
   }
 
   function calculateLevenshteinDistances() {
+    for (const annotationsObject of userAnnotations.value) {
+      const manuscript_name = annotationsObject['manuscript_name']
+      for (const page in annotationsObject['annotations']) {
+        for (const line in annotationsObject['annotations'][page]) {
+          annotationsObject['annotations'][page][line]['levenshtein_distance'] = levenshteinDistance(
+            annotations.value[manuscript_name][page][line]['predicted_label'],
+            annotationsObject['annotations'][page][line]['ground_truth'],
+          );
+        }
+      }
+    }
+    
+    
     const manuscript_name = Object.keys(annotations.value)[0]
-    for (const page in request.value[manuscript_name]) {
-      for (const line in request.value[manuscript_name][page]) {
-        request.value[manuscript_name][page][line]['levenshtein_distance'] = levenshteinDistance(
+    for (const page in userAnnotations.value[manuscript_name]) {
+      for (const line in userAnnotations.value[manuscript_name][page]) {
+        userAnnotations.value[manuscript_name][page][line]['levenshtein_distance'] = levenshteinDistance(
           annotations.value[manuscript_name][page][line]['predicted_label'],
-          request.value[manuscript_name][page][line]['ground_truth'],
+          userAnnotations.value[manuscript_name][page][line]['ground_truth'],
         );
       }
     }
   }
 
-  return { annotations, request, calculateLevenshteinDistances }
+  return { annotations, userAnnotations, calculateLevenshteinDistances, modelName }
 })
 
 if (import.meta.hot) {
