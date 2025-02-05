@@ -1,0 +1,197 @@
+import os
+import argparse
+import numpy as np
+import cv2
+import torch
+import time
+from scipy.signal import find_peaks
+import torch.nn.functional as F
+from skimage import io
+import torch.nn as nn
+import torch.nn.init as init
+import torchvision
+from torchvision import models
+# import matplotlib.pyplot as plt
+from collections import namedtuple
+from packaging import version
+from collections import OrderedDict
+from scipy.ndimage import maximum_filter
+from scipy.ndimage import label
+import math
+
+
+
+def gen_bounding_boxes(det, binarize_threshold):
+    img = np.uint8(det)
+    _, img1 = cv2.threshold(img, binarize_threshold, 255, cv2.THRESH_BINARY)
+    # Find contours
+    contours, _ = cv2.findContours(img1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    bounding_boxes = []
+    # Extract bounding boxes from contours
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        bounding_boxes.append((x, y, w, h))
+
+    return bounding_boxes
+
+def load_points_and_labels(points_file, labels_file):
+    # Load points
+    points = np.loadtxt(points_file, dtype=int)
+
+    # Load labels, handling 'None' entries
+    with open(labels_file, "r") as f:
+        labels = [line.strip() for line in f]
+    
+    # Convert labels to integers where possible, otherwise mark as None
+    filtered_points = []
+    filtered_labels = []
+    
+    for point, label in zip(points, labels):
+        if label.lower() != "none":  # Exclude 'None' labels
+            filtered_points.append(point)
+            filtered_labels.append(int(label))  # Convert valid labels to int
+    
+    return np.array(filtered_points), np.array(filtered_labels)
+
+
+def load_images_from_folder(folder_path):
+    inp_images = []
+    file_names = []
+    
+    # Get all files in the directory
+    files = sorted(os.listdir(folder_path))
+    
+    for file in files:
+        # Check if the file is an image (PNG or JPG)
+        if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+            try:
+                # Construct the full file path
+                file_path = os.path.join(folder_path, file)
+                
+                # Open the image file
+                image = loadImage(file_path)
+                
+                # Append the image and filename to our lists
+                inp_images.append(image)
+                file_names.append(file)
+            except Exception as e:
+                print(f"Error loading {file}: {str(e)}")
+    
+    return inp_images, file_names
+
+# Function Definitions
+def loadImage(img_file):
+    img = io.imread(img_file)           # RGB order
+    print(f'loading image with shape: {img.shape}')
+    if img.shape[0] == 2: img = img[0]
+    if len(img.shape) == 2 : img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    if img.shape[2] == 4:   img = img[:,:,:3]
+    img = np.array(img)
+
+    return img
+
+
+
+def assign_labels_and_plot(bounding_boxes, points, labels, image, output_path="output.png"):
+    # Convert image to color (if grayscale)
+    if len(image.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+    labeled_bboxes = []
+    no_entry_again = []
+    for bbox in bounding_boxes:
+        x_min, y_min, w, h = bbox
+        x_max, y_max = x_min + w, y_min + h
+
+        # Find labels of points inside this bounding box
+        assigned_label = []
+        for (px, py), label in zip(points, labels):
+            if x_min <= px <= x_max and y_min <= py <= y_max:
+                assigned_label.append(label)  # Assign the first found label
+                #break  # Stop checking once a label is assigned
+
+
+        if len(set(assigned_label)) == 1: # IF ONLY ONE LABEL PER BOUNDING BOX
+            labeled_bboxes.append((x_min, y_min, w, h, assigned_label[0]))
+            # Draw bounding box
+            cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  # Green box
+            cv2.putText(image, str(assigned_label[0]), (x_min, y_min - 5), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                
+
+        # handle tall bounding boxes
+        # elif len(set(assigned_label))> 1:
+        #     divide_by = len(set(assigned_label))
+        #     print(f"dividing by: {divide_by}")
+        #     unit = int(h/divide_by)
+        #     h = unit
+        #     y_start = y_min
+
+        #     for i in range(divide_by):
+        #         print(divide_by)
+        #         print(f"YOOO:{(x_min,y_start, w, h)}")
+        #         if (x_min,y_start,w) not in no_entry_again:
+        #             bounding_boxes.append((x_min,y_start, w, h))
+        #             no_entry_again.append((x_min,y_start,w))
+        #         y_start = y_start + unit
+        #         h = h + unit
+
+        
+
+    # Draw points with labels
+    for (px, py), label in zip(points, labels):
+        if label is not None:
+            cv2.circle(image, (px, py), 5, (0, 0, 255), -1)  # Red point
+            cv2.putText(image, str(label), (px + 5, py - 5), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+    # Save image
+    cv2.imwrite(output_path, image)
+    print(f"Annotated image saved as: {output_path}")
+
+    return labeled_bboxes  # List of (x, y, w, h, label)
+
+m_name = 'man-seg'
+MANUSCRIPT_DIR = f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/'
+HEATMAP_DIR = MANUSCRIPT_DIR+'/heatmaps'
+IMAGES_DIR = MANUSCRIPT_DIR+'/leaves'
+LINES_DIR = MANUSCRIPT_DIR+'/lines'
+ANNOT_DIR = MANUSCRIPT_DIR+'/points-2D'
+
+inp_images, inp_file_names = load_images_from_folder(IMAGES_DIR)
+print(inp_file_names)
+heatmaps_images, heatmap_file_names = load_images_from_folder(HEATMAP_DIR)
+print(heatmap_file_names)
+
+binarize_threshold=100
+
+
+for det,image,file_name in zip(heatmaps_images,inp_images,inp_file_names):
+    
+    filtered_points, filtered_labels = load_points_and_labels(f'{ANNOT_DIR}/{file_name[:-4]}_points.txt', f'{ANNOT_DIR}/{file_name[:-4]}_labels.txt')
+
+    # handling loading heatmaps
+    det = det.squeeze()  # Removes single-dimensional entries (e.g., (H, W, 1) → (H, W))
+    print(det.shape)
+    if len(det.shape) == 3:  
+        det = det[:, :, 0]  # Keep only one channel
+    print(det.shape)
+
+    #print(image.shape) this is x2 scale
+    img2 = cv2.cvtColor(cv2.resize(image, det.shape[::-1]), cv2.COLOR_BGR2GRAY) 
+
+
+    bounding_boxes = gen_bounding_boxes(det, binarize_threshold)
+    labeled_bboxes = assign_labels_and_plot(bounding_boxes, filtered_points, filtered_labels, img2, output_path=ANNOT_DIR+'/'+file_name+'.png')
+
+
+    #line_images = gen_line_images(img2,peaks1,bounding_boxes,lines, lineheight_baseline_percentile)
+
+    if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
+        os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
+
+    # for i in range(len(line_images)):
+    #     cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
+    # for bbox in labeled_bboxes:
+    #     print(bbox)  # (x, y, w, h, label)
+

@@ -11,58 +11,17 @@ import torch.nn as nn
 import torch.nn.init as init
 import torchvision
 from torchvision import models
-# import matplotlib.pyplot as plt
+
+from scipy.ndimage import maximum_filter
+from scipy.ndimage import label
+import numpy.random as npr
+
 from collections import namedtuple
 from packaging import version
 from collections import OrderedDict
-from scipy.ndimage import maximum_filter
-from scipy.ndimage import label
 
-# #GLOBAL VARIABLES
-# lineheight_baseline_percentile = None
-# binarize_threshold = None
-
-
-def heatmap_to_pointcloud(heatmap, min_peak_value=0.3, min_distance=10):
-    """
-    Convert a 2D heatmap to a point cloud by identifying local maxima and generating
-    points with density proportional to the heatmap intensity.
-    
-    Parameters:
-    -----------
-    heatmap : numpy.ndarray
-        2D array representing the heatmap
-    min_peak_value : float
-        Minimum value for a peak to be considered (normalized between 0 and 1)
-    min_distance : int
-        Minimum distance between peaks in pixels
-        
-    Returns:
-    --------
-    points : numpy.ndarray
-        Array of shape (N, 2) containing the generated points
-    """
-    # Normalize heatmap to [0, 1]
-    heatmap_norm = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
-    
-    # Find local maxima
-    local_max = maximum_filter(heatmap_norm, size=min_distance)
-    peaks = (heatmap_norm == local_max) & (heatmap_norm > min_peak_value)
-    
-    # Label connected components
-    labeled_peaks, num_peaks = label(peaks)
-    
-    points = []
-    
-    # For each peak, generate points
-    height = heatmap.shape[0]  # Get the height of the heatmap
-    for peak_idx in range(1, num_peaks + 1):
-        # Get peak location
-        peak_y, peak_x = np.where(labeled_peaks == peak_idx)[0][0], np.where(labeled_peaks == peak_idx)[1][0]
-        points.append([peak_x, peak_y])
-        #points.append([peak_x, height - 1 - peak_y])  # This line is modified
-
-    return np.array(points)
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
 
 
 # Function Definitions
@@ -318,6 +277,7 @@ def copyStateDict(state_dict):
         new_state_dict[name] = v
     return new_state_dict
 
+
 def detect(img, detector, device):
 
 
@@ -326,7 +286,6 @@ def detect(img, detector, device):
         x = x.to(device)
         with torch.no_grad():
             y = detector(x)
-            
         region_score = y[0,:,:,0].cpu().data.numpy()
         affinity_score = y[0,:,:,1].cpu().data.numpy()
         return region_score,affinity_score
@@ -356,225 +315,132 @@ def load_images_from_folder(folder_path):
     
     return inp_images, file_names
 
+def heatmap_to_pointcloud(heatmap, min_peak_value=0.3, min_distance=10):
+    """
+    Convert a 2D heatmap to a point cloud by identifying local maxima and generating
+    points with density proportional to the heatmap intensity.
+    
+    Parameters:
+    -----------
+    heatmap : numpy.ndarray
+        2D array representing the heatmap
+    min_peak_value : float
+        Minimum value for a peak to be considered (normalized between 0 and 1)
+    min_distance : int
+        Minimum distance between peaks in pixels
+        
+    Returns:
+    --------
+    points : numpy.ndarray
+        Array of shape (N, 2) containing the generated points
+    """
+    # Normalize heatmap to [0, 1]
+    heatmap_norm = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
+    
+    # Find local maxima
+    local_max = maximum_filter(heatmap_norm, size=min_distance)
+    peaks = (heatmap_norm == local_max) & (heatmap_norm > min_peak_value)
+    
+    # Label connected components
+    labeled_peaks, num_peaks = label(peaks)
+    
+    points = []
+    
+    # For each peak, generate points
+    height = heatmap.shape[0]  # Get the height of the heatmap
+    for peak_idx in range(1, num_peaks + 1):
+        # Get peak location
+        peak_y, peak_x = np.where(labeled_peaks == peak_idx)[0][0], np.where(labeled_peaks == peak_idx)[1][0]
+        #points.append([peak_x, peak_y])
+        points.append([peak_x, height - 1 - peak_y])  # This line is modified
 
-#%%
-def gen_bounding_boxes(det,peaks, lineheight_baseline_percentile, binarize_threshold):
-  img = np.uint8(det * 255)
-  _, img1 = cv2.threshold(img, binarize_threshold, 255, cv2.THRESH_BINARY)
+    return np.array(points)
 
-  # Find contours
-  contours, _ = cv2.findContours(img1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+def visualize_results(heatmap, points):
+    """
+    Visualize the original heatmap and overlay the resulting point cloud on it.
+    """
+    import matplotlib.pyplot as plt
+    
+    # Create a single figure and axis
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Plot heatmap
+    ax.imshow(heatmap, cmap='hot')
+    
+    # Overlay the point cloud on the heatmap
+    ax.scatter(points[:, 0], points[:, 1], s=1, c='blue', alpha=0.5)
+    
+    # Set title and axis limits
+    ax.set_title('Heatmap with Generated Point Cloud')
+    ax.set_xlim(0, heatmap.shape[1])
+    ax.set_ylim(heatmap.shape[0], 0)  # Invert y-axis to match image coordinates
+    
+    plt.tight_layout()
+    return fig
 
-  bounding_boxes = []
-  max_height = np.percentile(peaks[1:]-peaks[:-1],lineheight_baseline_percentile)
-  # Extract bounding boxes from contours
-  for contour in contours:
-      x, y, w, h = cv2.boundingRect(contour)
-      if h<=max_height:
-          bounding_boxes.append((x, y, w, h))
-      else:
-          n_b = np.int32(np.ceil(h/max_height))
-          # Calculate the height of each box
-          equal_height = h // n_b
-
-          # Calculate the height adjustment needed for the last box to ensure total height is covered
-          height_adjustment = h - (equal_height * n_b)
-
-          for i in range(n_b):
-              new_y = y + (i * equal_height)
-              # Adjust the height of the last box if necessary
-              box_height = equal_height + (height_adjustment if i == n_b - 1 else 0)
-              bounding_boxes.append((x, new_y, w, box_height))
-
-  return bounding_boxes
-
-def assign_lines(bounding_boxes,det):
-
-  ys = det.sum(axis=1)
-  thres = 0.5 * ys.max()
-  peaks, _ = find_peaks(ys, height=thres,distance=det.shape[0]/100,width=5)
-
-  lines = []
-  xs = det.sum(axis = 0)
-  thres = 0.5 * xs.max()
-  xpeaks, _ = find_peaks(xs, height=thres)
-  ys1 = det[:,xpeaks[0]:xpeaks[0]+100].sum(axis=1)
-  thres = 0.5 * ys1.max()
-  p1, _ = find_peaks(ys1, height=thres,distance=det.shape[0]/100,width=5)
-  ys2 = det[:,xpeaks[-1]-100:xpeaks[-1]].sum(axis=1)
-  thres = 0.5 * ys2.max()
-  p2, _ = find_peaks(ys2, height=thres,distance=det.shape[0]/100,width=5)
-  xmid = int((xpeaks[0]+xpeaks[-1])/2)
-  ys3 = det[:,xmid-50:xmid+50].sum(axis=1)
-  thres = 0.5 * ys3.max()
-  p3, _ = find_peaks(ys3, height=thres,distance=det.shape[0]/100,width=5)
-  if(peaks[0]-p1[0]>det.shape[0]/12):
-    p1 = np.copy(p1[1:])
-  p= min(p1, p2, p3, key=len)
-  l = len(p)
-  if(len(p1)>=l+1):
-    k = len(p1) - len(p)
-    ind = np.argmin(np.abs(p1[:k+1] - p[0]))
-    peaks1 = p1[ind:l+ind]
-  else:
-    peaks1 = p1
-
-  if(len(p2)>=l+1):
-    k = len(p2) - len(p)
-    ind = np.argmin(np.abs(p2[:k+1] - p[0]))
-    peaks2 = p2[ind:l+ind]
-  else:
-    peaks2 = p2
-
-  if(len(p3)>=l+1):
-    k = len(p3) - len(p)
-    ind = np.argmin(np.abs(p3[:k+1] - p[0]))
-    peaks3 = p3[ind:l+ind]
-  else:
-    peaks3 = p3
-
-  for box in bounding_boxes:
-      x, y, _, h = box
-      mid_y = y + h / 2  # Midpoint of the y-dimension
-      wt1 = np.abs(x - xpeaks[0])
-      wt2 = np.abs(x - xpeaks[-1])
-      wt3 = np.abs(x - xmid)
-      if x<=xmid:
-        peaks = wt3*peaks1/(wt1+wt3)+wt1*peaks3/(wt1+wt3)
-      else:
-        peaks = wt3*peaks2/(wt2+wt3)+wt2*peaks3/(wt2+wt3)
-
-      # Calculate the absolute difference between mid_y and each peak, then find the index of the minimum difference
-      c_index = np.argmin(np.abs(peaks - mid_y))
-      if(np.abs(mid_y-peaks[c_index])>20):
-          c_index=-1
-      lines.append(c_index)
-  return lines,peaks1
-
-def crop_img(img):
-    sum_rows = np.sum(img, axis=1)
-    sum_cols = np.sum(img, axis=0)
-
-    # Find indices where sum starts to vary for rows
-    row_start = np.where(sum_rows != sum_rows[0])[0][0] if np.any(sum_rows != sum_rows[0]) else 0
-    row_end = np.where(sum_rows != sum_rows[-1])[0][-1] if np.any(sum_rows != sum_rows[-1]) else len(sum_rows) - 1
-
-    # Find indices where sum starts to vary for columns
-    col_start = np.where(sum_cols != sum_cols[0])[0][0] if np.any(sum_cols != sum_cols[0]) else 0
-    col_end = np.where(sum_cols != sum_cols[-1])[0][-1] if np.any(sum_cols != sum_cols[-1]) else len(sum_cols) - 1
-
-    # Crop the image using the identified indices
-    return np.copy(img[row_start:row_end+1, col_start:col_end+1])
-
-def gen_line_images(img2,peaks,bounding_boxes,lines, lineheight_baseline_percentile):
-  # change here
-#   global lineheight_baseline_percentile
-  line_images=[]
-  max_height_line = np.percentile(peaks[1:]-peaks[:-1],lineheight_baseline_percentile)
-  pad=int(max_height_line*0.2)
-  for l in range(len(peaks)):
-      # Filter bounding boxes for the current label
-      filtered_boxes = [box for box, idx in zip(bounding_boxes, lines) if idx == l]
-
-      if not filtered_boxes:
-          continue
-
-      # Calculate the total width and maximum height for the new image
-      total_width = max(x for x, _,_, _ in filtered_boxes) + 500  # 10 pixels padding on each side
-      max_height = max(h for _, _, _, h in filtered_boxes) + 250  # 5 pixels padding top and bottom
-      miny = min(y for _, y,_, _ in filtered_boxes)
-      # Create an empty image for this label
-      new_img = np.ones((max_height, total_width), dtype=np.uint8)*np.int32(np.median(img2))
-
-      for box in filtered_boxes:
-          x, y, w, h = box
-          blob = img2[y-pad:y+h+pad, x-10:x+w+10]
-          new_img[y-miny:y-miny+h+2*pad,x-10:x+w+10]=blob
-      line_images.append(crop_img(new_img))
-
-  return line_images
-
-
-def segment_lines(folder_path, lineheight_baseline_percentile=80, binarize_threshold=100):
-    print(folder_path)
-    #m_name = folder_path.split('/')[-2]
+def process_image(folder_path):
     m_name = os.path.basename(os.path.dirname(folder_path))
+    if os.path.exists(f'/mnt/cai-data/layout-analysis/manuscripts/{m_name}/heatmaps') == False:
+        os.makedirs(f'/mnt/cai-data/layout-analysis/manuscripts/{m_name}/heatmaps')
+
     device = torch.device('cuda') #change to cpu if no gpu
 
-
-    # HEATMAP
+    #load images from folder
     inp_images, file_names = load_images_from_folder(folder_path)
 
+    #load craft model
     _detector = CRAFT()
-    _detector.load_state_dict(copyStateDict(torch.load("/mnt/cai-data/manuscript-annotation-tool/models/segmentation/craft_mlt_25k.pth",map_location=device)))
+    _detector.load_state_dict(copyStateDict(torch.load("/mnt/cai-data/layout-analysis/models/craft_mlt_25k.pth",map_location=device)))
     detector = torch.nn.DataParallel(_detector).to(device)
     detector.eval()
+
     st = time.time()
 
-    out_images=[]
-    points = []
+
+    # for each image in the folder
+    test_data_path = '/home/kartik/layout-analysis/data/test-data/'
+
+    pg_counter=0
     for image,_filename in zip(inp_images, file_names):
         # get region score and affinity score
         region_score, affinity_score = detect(image,detector, device)
         assert region_score.shape == affinity_score.shape
-        points_twoD = heatmap_to_pointcloud(region_score, min_peak_value=0.3, min_distance=10)
 
-        points.append(points_twoD)
-        out_images.append(np.copy(region_score))
+        # resize image to match the shape of the heatmaps
+        image = cv2.resize(image, dsize=region_score.shape[::-1], interpolation=cv2.INTER_CUBIC)
+        # Array of shape (N, 2) - x,y locations of each peak
+        points = heatmap_to_pointcloud(region_score, min_peak_value=0.3, min_distance=10)
+        print(points.shape[0])
+        # Save figure
+        print(region_score.shape)
+        print(points.shape)
+        np.savetxt(test_data_path+f'pg_{pg_counter}_points.txt', points, fmt='%d')
 
+        fig = visualize_results(region_score, points)
+        plt.show()
+        plt.axis('off')  # Turn off the axis        
+        #plt.savefig(f'/mnt/cai-data/layout-analysis/manuscripts/{m_name}/heatmaps/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
+        #plt.savefig(f'/home/kartik/layout-analysis/analysis_images/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
+        pg_counter +=1
 
-    if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/heatmaps') == False:
-        os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/heatmaps')
-
-    if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/points-2D') == False:
-        os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/points-2D')
-
-    for _img,_filename in zip(out_images,file_names):
-        cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/heatmaps/{_filename}',255*_img)
-    for points_twoD,_filename in zip(points,file_names):
-        np.savetxt(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/points-2D/{os.path.splitext(_filename)[0]}__points.txt', points_twoD, fmt='%d')
-    
     print(f"{time.time()-st:.2f} seconds elapsed.....")
 
+        
 
-    # ALGORITHM
-    for det,image,file_name in zip(out_images,inp_images,file_names):
-        print(file_name)
-        ys = det.sum(axis=1)
-        thres = 0.5 * ys.max()
-        try:
-            peaks, _ = find_peaks(ys, height=thres,distance=det.shape[0]/100,width=5)
-            bounding_boxes = gen_bounding_boxes(det,peaks, lineheight_baseline_percentile, binarize_threshold)
-            img2 = cv2.cvtColor(cv2.resize(image, det.shape[::-1]), cv2.COLOR_BGR2GRAY)
-            
-            lines,peaks1 = assign_lines(bounding_boxes,det)
-            line_images = gen_line_images(img2,peaks1,bounding_boxes,lines, lineheight_baseline_percentile)
 
-            if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
-                os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
-            for i in range(len(line_images)):
-                cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
-        except:
-            with open(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/points-2D/failures.txt', 'a') as file:
-                file.write(f"{file_name}")
 
-            # if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
-            #     os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
-            # for i in range(len(line_images)):
-            #     cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
+
+
+
+
 
 
 # Create the arg parser
-# parser = argparse.ArgumentParser(description="A simple script to process a path")
-# parser.add_argument('path', type=str, help='The path to folder which contains leaf images')
-# parser.add_argument('--lineheight_baseline_percentile', type=int, default=80, help='Line height baseline is the 80 percentile value of all line heights')
-# parser.add_argument('--binarize_threshold', type=int, default=100, help='Binarize threshold value (default: 100)')
+parser = argparse.ArgumentParser(description="A simple script to process a path")
+parser.add_argument('--path', type=str, help='The path to folder which contains leaf images', default="/mnt/cai-data/layout-analysis/manuscripts/DMV/leaves")
 
-# args = parser.parse_args()
-# folder_path = args.path
-# lineheight_baseline_percentile = args.lineheight_baseline_percentile
-# binarize_threshold = args.binarize_threshold
+args = parser.parse_args()
+folder_path = args.path
 
-# #folder_path = "/mnt/cai-data/manuscript-annotation-tool/manuscripts/TEST/leaves"
-# segment_lines(folder_path)
-# %%
+process_image(folder_path)
