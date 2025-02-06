@@ -558,10 +558,11 @@ def segment_lines(folder_path, lineheight_baseline_percentile=80, binarize_thres
             with open(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/points-2D/failures.txt', 'a') as file:
                 file.write(f"{file_name}")
 
-            # if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
-            #     os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
-            # for i in range(len(line_images)):
-            #     cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
+            if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
+                os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
+            black_image = np.zeros((50, 900, 3), dtype=np.uint8)
+            for i in range(5):
+                cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',black_image)
 
 
 # Create the arg parser

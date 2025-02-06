@@ -144,14 +144,58 @@ def assign_labels_and_plot(bounding_boxes, points, labels, image, output_path="o
             cv2.circle(image, (px, py), 5, (0, 0, 255), -1)  # Red point
             cv2.putText(image, str(label), (px + 5, py - 5), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-
     # Save image
     cv2.imwrite(output_path, image)
     print(f"Annotated image saved as: {output_path}")
 
+
+
+
     return labeled_bboxes  # List of (x, y, w, h, label)
 
-m_name = 'man-seg'
+
+def crop_img(img):
+    sum_rows = np.sum(img, axis=1)
+    sum_cols = np.sum(img, axis=0)
+
+    # Find indices where sum starts to vary for rows
+    row_start = np.where(sum_rows != sum_rows[0])[0][0] if np.any(sum_rows != sum_rows[0]) else 0
+    row_end = np.where(sum_rows != sum_rows[-1])[0][-1] if np.any(sum_rows != sum_rows[-1]) else len(sum_rows) - 1
+
+    # Find indices where sum starts to vary for columns
+    col_start = np.where(sum_cols != sum_cols[0])[0][0] if np.any(sum_cols != sum_cols[0]) else 0
+    col_end = np.where(sum_cols != sum_cols[-1])[0][-1] if np.any(sum_cols != sum_cols[-1]) else len(sum_cols) - 1
+
+    # Crop the image using the identified indices
+    return np.copy(img[row_start:row_end+1, col_start:col_end+1])
+
+def gen_line_images(img2,unique_labels,bounding_boxes):
+  # change here
+#   global lineheight_baseline_percentile
+  line_images=[]
+  pad=5
+  for l in unique_labels:
+      # Filter bounding boxes for the current label
+      filtered_boxes = [box for box in bounding_boxes if box[4] == l]
+      if not filtered_boxes:
+          continue
+
+      # Calculate the total width and maximum height for the new image
+      total_width = max(x for x, _,_, _,_ in filtered_boxes) + 500  # 10 pixels padding on each side
+      max_height = max(h for _, _, _, h,_ in filtered_boxes) + 250  # 5 pixels padding top and bottom
+      miny = min(y for _, y,_, _,_ in filtered_boxes)
+      # Create an empty image for this label
+      new_img = np.ones((max_height, total_width), dtype=np.uint8)*np.int32(np.median(img2))
+
+      for box in filtered_boxes:
+          x, y, w, h, l = box
+          blob = img2[y-pad:y+h+pad, x-10:x+w+10]
+          new_img[y-miny:y-miny+h+2*pad,x-10:x+w+10]=blob
+      line_images.append(crop_img(new_img))
+
+  return line_images
+
+m_name = 'man-seg-backup'
 MANUSCRIPT_DIR = f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/'
 HEATMAP_DIR = MANUSCRIPT_DIR+'/heatmaps'
 IMAGES_DIR = MANUSCRIPT_DIR+'/leaves'
@@ -182,16 +226,19 @@ for det,image,file_name in zip(heatmaps_images,inp_images,inp_file_names):
 
 
     bounding_boxes = gen_bounding_boxes(det, binarize_threshold)
-    labeled_bboxes = assign_labels_and_plot(bounding_boxes, filtered_points, filtered_labels, img2, output_path=ANNOT_DIR+'/'+file_name+'.png')
+    labeled_bboxes = assign_labels_and_plot(bounding_boxes, filtered_points, filtered_labels, img2, output_path=ANNOT_DIR+'/'+file_name)
 
+    # Sort by the numeric label (5th element)
+    sorted_bboxes = sorted(labeled_bboxes, key=lambda x: x[4])
 
-    #line_images = gen_line_images(img2,peaks1,bounding_boxes,lines, lineheight_baseline_percentile)
+    # Get unique labels
+    unique_labels = set(label for _, _, _, _, label in labeled_bboxes)
+    print(unique_labels)
+    line_images = gen_line_images(img2,unique_labels,labeled_bboxes)
 
     if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
         os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
+    for i in range(len(line_images)):
+        cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
 
-    # for i in range(len(line_images)):
-    #     cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
-    # for bbox in labeled_bboxes:
-    #     print(bbox)  # (x, y, w, h, label)
 
