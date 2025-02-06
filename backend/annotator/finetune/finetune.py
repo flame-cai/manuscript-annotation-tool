@@ -100,3 +100,5 @@ def finetune(data):
     db.session.commit()
 
     train(opt, manuscript_name, amp=False)
+
+    shutil.rmtree("temp")
