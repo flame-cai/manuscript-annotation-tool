@@ -3,7 +3,7 @@ import { ref } from 'vue'
 
 export const useAnnotationStore = defineStore('annotations', () => {
   const modelName = ref();
-  const annotations = ref({})
+  const recognitions = ref({})
   const userAnnotations = ref([])
 
   function levenshteinDistance(str1 = '', str2 = '') {
@@ -35,26 +35,15 @@ export const useAnnotationStore = defineStore('annotations', () => {
       for (const page in annotationsObject['annotations']) {
         for (const line in annotationsObject['annotations'][page]) {
           annotationsObject['annotations'][page][line]['levenshtein_distance'] = levenshteinDistance(
-            annotations.value[manuscript_name][page][line]['predicted_label'],
+            recognitions.value[manuscript_name][page][line]['predicted_label'],
             annotationsObject['annotations'][page][line]['ground_truth'],
           );
         }
       }
     }
-    
-    
-    const manuscript_name = Object.keys(annotations.value)[0]
-    for (const page in userAnnotations.value[manuscript_name]) {
-      for (const line in userAnnotations.value[manuscript_name][page]) {
-        userAnnotations.value[manuscript_name][page][line]['levenshtein_distance'] = levenshteinDistance(
-          annotations.value[manuscript_name][page][line]['predicted_label'],
-          userAnnotations.value[manuscript_name][page][line]['ground_truth'],
-        );
-      }
-    }
   }
 
-  return { annotations, userAnnotations, calculateLevenshteinDistances, modelName }
+  return { recognitions, userAnnotations, calculateLevenshteinDistances, modelName }
 })
 
 if (import.meta.hot) {

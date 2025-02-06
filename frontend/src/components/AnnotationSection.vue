@@ -1,19 +1,20 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AnnotationPage from '@/components/AnnotationPage.vue'
 import { useAnnotationStore } from '@/stores/annotationStore'
 
-const props = defineProps(['recognitions'])
-const emit = defineEmits(['annotated'])
+const router = useRouter()
 const annotationStore = useAnnotationStore()
-const page = ref(Object.keys(props.recognitions).sort()[0])
+const manuscript_name = Object.keys(annotationStore.recognitions)[0]
+const page = ref(annotationStore.recognitions[manuscript_name][0])
 // const modelName = ref(annotationStore.modelName);
 
 function uploadGroundTruth() {
   annotationStore.calculateLevenshteinDistances()
   annotationStore.userAnnotations.forEach((elem) => {
-    elem["model_name"] = annotationStore.modelName;
-    console.log("added Model name", annotationStore.modelName)
+    elem['model_name'] = annotationStore.modelName
+    console.log('added Model name', annotationStore.modelName)
   })
   fetch(import.meta.env.VITE_BACKEND_URL + '/fine-tune', {
     method: 'POST',
@@ -22,7 +23,7 @@ function uploadGroundTruth() {
     },
     body: JSON.stringify(annotationStore.userAnnotations),
   }).then(() => {
-    emit('annotated')
+    router.push({"name": 'upload-manuscript'})
   })
 }
 </script>
@@ -43,7 +44,7 @@ function uploadGroundTruth() {
     <label for="page" class="form-label">Page</label>
     <select class="form-select" id="page" v-model="page" placeholder="Select a model">
       <option
-        v-for="(page_data, page_name) in props.recognitions"
+        v-for="(page_data, page_name) in annotationStore.recognitions[manuscript_name]"
         :key="page_name"
         :value="page_name"
       >
@@ -52,9 +53,11 @@ function uploadGroundTruth() {
     </select>
   </div>
   <AnnotationPage
-    v-for="(page_data, page_name) in props.recognitions"
+    v-for="(page_data, page_name) in annotationStore.recognitions[manuscript_name]"
     :key="page_data"
     :data="page_data"
+    :page_name="page_name"
+    :manuscript_name="manuscript_name"
     v-show="page === page_name"
   />
 </template>
