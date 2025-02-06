@@ -278,5 +278,7 @@ def train(opt, manuscript_name, show_number = 2, amp=False ):
 
         if i == opt.num_iter:
             print('end the training')
+            del model
+            torch.cuda.empty_cache()
             sys.exit()
         i += 1

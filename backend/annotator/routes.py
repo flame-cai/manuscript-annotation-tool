@@ -2,6 +2,8 @@ import os
 import threading
 
 from flask import Blueprint, request, send_from_directory, current_app
+import torch
+import gc
 
 from annotator.segmentation import segment_lines
 from annotator.recognition.recognition import recognise_characters
@@ -42,6 +44,9 @@ def annotate():
 
     segment_lines(os.path.join(folder_path, "leaves"))
     lines = recognise_characters(folder_path, model, manuscript_name)
+    torch.cuda.empty_cache()
+    gc.collect()
+    # find_gpu_tensors()
 
     return lines, 200
 

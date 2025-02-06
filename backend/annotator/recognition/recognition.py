@@ -2,6 +2,7 @@ import os
 import subprocess
 
 from datetime import datetime
+import torch
 
 from annotator.recognition.demo import recognise_lines
 from annotator.models import db, RecognitionLog
@@ -62,4 +63,9 @@ def recognise_characters(folder_path, model, manuscript_name):
             db.session.add(log_entry)
         db.session.commit()
         lines_of_all_pages[page_subfolder] = lines_of_one_page
+    
+    # clear GPU memory
+    del lines_of_one_page
+    torch.cuda.empty_cache()
+    
     return lines_of_all_pages
