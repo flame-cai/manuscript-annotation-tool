@@ -2,7 +2,7 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useAnnotationStore = defineStore('annotations', () => {
-  const modelName = ref();
+  const modelName = ref()
   const recognitions = ref({})
   const userAnnotations = ref([])
 
@@ -34,18 +34,25 @@ export const useAnnotationStore = defineStore('annotations', () => {
       const manuscript_name = annotationsObject['manuscript_name']
       for (const page in annotationsObject['annotations']) {
         for (const line in annotationsObject['annotations'][page]) {
-          annotationsObject['annotations'][page][line]['levenshtein_distance'] = levenshteinDistance(
-            recognitions.value[manuscript_name][page][line]['predicted_label'],
-            annotationsObject['annotations'][page][line]['ground_truth'],
-          );
+          annotationsObject['annotations'][page][line]['levenshtein_distance'] =
+            levenshteinDistance(
+              recognitions.value[manuscript_name][page][line]['predicted_label'],
+              annotationsObject['annotations'][page][line]['ground_truth'],
+            )
         }
       }
     }
   }
 
-  return { recognitions, userAnnotations, calculateLevenshteinDistances, modelName }
+  function reset() {
+    modelName.value = null
+    recognitions.value = {}
+    userAnnotations.value = {}
+  }
+
+  return { recognitions, userAnnotations, modelName, calculateLevenshteinDistances, reset }
 })
 
 if (import.meta.hot) {
-    import.meta.hot.accept(acceptHMRUpdate(useAnnotationStore, import.meta.hot))
+  import.meta.hot.accept(acceptHMRUpdate(useAnnotationStore, import.meta.hot))
 }

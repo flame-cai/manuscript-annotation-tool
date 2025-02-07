@@ -8,7 +8,6 @@ const router = useRouter()
 const annotationStore = useAnnotationStore()
 const manuscript_name = Object.keys(annotationStore.recognitions)[0]
 const page = ref(annotationStore.recognitions[manuscript_name][0])
-// const modelName = ref(annotationStore.modelName);
 
 function uploadGroundTruth() {
   annotationStore.calculateLevenshteinDistances()
@@ -23,7 +22,8 @@ function uploadGroundTruth() {
     },
     body: JSON.stringify(annotationStore.userAnnotations),
   }).then(() => {
-    router.push({"name": 'upload-manuscript'})
+    annotationStore.reset()
+    router.push({ name: 'upload-manuscript' })
   })
 }
 </script>
