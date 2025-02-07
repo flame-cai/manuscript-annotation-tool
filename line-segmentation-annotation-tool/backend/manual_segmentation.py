@@ -1,24 +1,7 @@
 import os
-import argparse
 import numpy as np
 import cv2
-import torch
-import time
-from scipy.signal import find_peaks
-import torch.nn.functional as F
 from skimage import io
-import torch.nn as nn
-import torch.nn.init as init
-import torchvision
-from torchvision import models
-# import matplotlib.pyplot as plt
-from collections import namedtuple
-from packaging import version
-from collections import OrderedDict
-from scipy.ndimage import maximum_filter
-from scipy.ndimage import label
-import math
-
 
 
 def gen_bounding_boxes(det, binarize_threshold):
@@ -90,8 +73,6 @@ def loadImage(img_file):
 
     return img
 
-
-
 def assign_labels_and_plot(bounding_boxes, points, labels, image, output_path="output.png"):
     # Convert image to color (if grayscale)
     if len(image.shape) == 2:
@@ -153,7 +134,6 @@ def assign_labels_and_plot(bounding_boxes, points, labels, image, output_path="o
 
     return labeled_bboxes  # List of (x, y, w, h, label)
 
-
 def crop_img(img):
     sum_rows = np.sum(img, axis=1)
     sum_cols = np.sum(img, axis=0)
@@ -195,50 +175,50 @@ def gen_line_images(img2,unique_labels,bounding_boxes):
 
   return line_images
 
-m_name = 'man-seg-backup'
-MANUSCRIPT_DIR = f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/'
-HEATMAP_DIR = MANUSCRIPT_DIR+'/heatmaps'
-IMAGES_DIR = MANUSCRIPT_DIR+'/leaves'
-LINES_DIR = MANUSCRIPT_DIR+'/lines'
-ANNOT_DIR = MANUSCRIPT_DIR+'/points-2D'
+# m_name = 'man-seg-backup'
+# MANUSCRIPT_DIR = f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/'
+# HEATMAP_DIR = MANUSCRIPT_DIR+'/heatmaps'
+# IMAGES_DIR = MANUSCRIPT_DIR+'/leaves'
+# LINES_DIR = MANUSCRIPT_DIR+'/lines'
+# ANNOT_DIR = MANUSCRIPT_DIR+'/points-2D'
 
-inp_images, inp_file_names = load_images_from_folder(IMAGES_DIR)
-print(inp_file_names)
-heatmaps_images, heatmap_file_names = load_images_from_folder(HEATMAP_DIR)
-print(heatmap_file_names)
+# inp_images, inp_file_names = load_images_from_folder(IMAGES_DIR)
+# print(inp_file_names)
+# heatmaps_images, heatmap_file_names = load_images_from_folder(HEATMAP_DIR)
+# print(heatmap_file_names)
 
-binarize_threshold=100
+# binarize_threshold=100
 
 
-for det,image,file_name in zip(heatmaps_images,inp_images,inp_file_names):
+# for det,image,file_name in zip(heatmaps_images,inp_images,inp_file_names):
     
-    filtered_points, filtered_labels = load_points_and_labels(f'{ANNOT_DIR}/{file_name[:-4]}_points.txt', f'{ANNOT_DIR}/{file_name[:-4]}_labels.txt')
+#     filtered_points, filtered_labels = load_points_and_labels(f'{ANNOT_DIR}/{file_name[:-4]}_points.txt', f'{ANNOT_DIR}/{file_name[:-4]}_labels.txt')
 
-    # handling loading heatmaps
-    det = det.squeeze()  # Removes single-dimensional entries (e.g., (H, W, 1) → (H, W))
-    print(det.shape)
-    if len(det.shape) == 3:  
-        det = det[:, :, 0]  # Keep only one channel
-    print(det.shape)
+#     # handling loading heatmaps
+#     det = det.squeeze()  # Removes single-dimensional entries (e.g., (H, W, 1) → (H, W))
+#     print(det.shape)
+#     if len(det.shape) == 3:  
+#         det = det[:, :, 0]  # Keep only one channel
+#     print(det.shape)
 
-    #print(image.shape) this is x2 scale
-    img2 = cv2.cvtColor(cv2.resize(image, det.shape[::-1]), cv2.COLOR_BGR2GRAY) 
+#     #print(image.shape) this is x2 scale
+#     img2 = cv2.cvtColor(cv2.resize(image, det.shape[::-1]), cv2.COLOR_BGR2GRAY) 
 
 
-    bounding_boxes = gen_bounding_boxes(det, binarize_threshold)
-    labeled_bboxes = assign_labels_and_plot(bounding_boxes, filtered_points, filtered_labels, img2, output_path=ANNOT_DIR+'/'+file_name)
+#     bounding_boxes = gen_bounding_boxes(det, binarize_threshold)
+#     labeled_bboxes = assign_labels_and_plot(bounding_boxes, filtered_points, filtered_labels, img2, output_path=ANNOT_DIR+'/'+file_name)
 
-    # Sort by the numeric label (5th element)
-    sorted_bboxes = sorted(labeled_bboxes, key=lambda x: x[4])
+#     # Sort by the numeric label (5th element)
+#     sorted_bboxes = sorted(labeled_bboxes, key=lambda x: x[4])
 
-    # Get unique labels
-    unique_labels = set(label for _, _, _, _, label in labeled_bboxes)
-    print(unique_labels)
-    line_images = gen_line_images(img2,unique_labels,labeled_bboxes)
+#     # Get unique labels
+#     unique_labels = set(label for _, _, _, _, label in labeled_bboxes)
+#     print(unique_labels)
+#     line_images = gen_line_images(img2,unique_labels,labeled_bboxes)
 
-    if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
-        os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
-    for i in range(len(line_images)):
-        cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
+#     if os.path.exists(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}') == False:
+#         os.makedirs(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}')
+#     for i in range(len(line_images)):
+#         cv2.imwrite(f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{m_name}/lines/{os.path.splitext(file_name)[0]}/line{i+1:03d}.jpg',line_images[i])
 
 
