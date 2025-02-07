@@ -43,7 +43,13 @@ export const useAnnotationStore = defineStore('annotations', () => {
     }
   }
 
-  return { recognitions, userAnnotations, calculateLevenshteinDistances, modelName }
+  function reset() {
+    modelName.value = null;
+    recognitions.value = {}
+    userAnnotations.value = {}
+  }
+
+  return { recognitions, userAnnotations, modelName, calculateLevenshteinDistances, reset, }
 })
 
 if (import.meta.hot) {
