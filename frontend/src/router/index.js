@@ -25,6 +25,11 @@ const router = createRouter({
           component: () => import('../components/AnnotationSection.vue')
         }
       ]
+    },
+    {
+      path: '/uploads',
+      name: 'uploaded-manuscripts',
+      component: () => import('../views/UploadedManuscriptsView.vue'),
     }
   ],
 })

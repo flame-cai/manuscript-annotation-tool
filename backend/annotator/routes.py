@@ -55,3 +55,19 @@ def do_finetune():
     thread.start()
     # finetune(request.json)
     return "Success", 200
+
+@bp.route('/uploaded-manuscripts', methods=["GET"])
+def get_manuscripts():
+    return os.listdir("/mnt/cai-data/manuscript-annotation-tool/manuscripts")
+
+@bp.route('/recognise', methods=["POST"])
+def recognise_manuscript():
+    manuscript_name = request.json.get("manuscript_name")
+    model = request.json.get("model")
+    print(manuscript_name)
+    print(model)
+    folder_path = os.path.join(BASE_PATH, manuscript_name)
+    print(folder_path)
+    lines = recognise_characters(folder_path, model, manuscript_name)
+    print(lines)
+    return lines, 200
