@@ -1,5 +1,4 @@
 <script setup>
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AnnotationPage from '@/components/AnnotationPage.vue'
 import { useAnnotationStore } from '@/stores/annotationStore'
@@ -7,7 +6,7 @@ import { useAnnotationStore } from '@/stores/annotationStore'
 const router = useRouter()
 const annotationStore = useAnnotationStore()
 const manuscript_name = Object.keys(annotationStore.recognitions)[0]
-const page = ref(annotationStore.recognitions[manuscript_name][0])
+annotationStore.currentPage = annotationStore.recognitions[manuscript_name][0]
 
 function uploadGroundTruth() {
   annotationStore.calculateLevenshteinDistances()
@@ -26,6 +25,11 @@ function uploadGroundTruth() {
     router.push({ name: 'upload-manuscript' })
   })
 }
+
+function switchToSegmentation() {
+  router.push({'name': 'segment'})
+}
+
 </script>
 
 <template>
@@ -38,11 +42,12 @@ function uploadGroundTruth() {
     />
   </div>
   <div class="mb-3">
-    <button class="btn btn-primary" @click="uploadGroundTruth">Fine-tune</button>
+    <button class="btn btn-primary me-2" @click="uploadGroundTruth">Fine-tune</button>
+    <button class="btn btn-warning" @click="switchToSegmentation">Correct Image Segments</button>
   </div>
   <div class="mb-3">
     <label for="page" class="form-label">Page</label>
-    <select class="form-select" id="page" v-model="page" placeholder="Select a model">
+    <select class="form-select" id="page" v-model="annotationStore.currentPage" placeholder="Select a model">
       <option
         v-for="(page_data, page_name) in annotationStore.recognitions[manuscript_name]"
         :key="page_name"
@@ -58,6 +63,6 @@ function uploadGroundTruth() {
     :data="page_data"
     :page_name="page_name"
     :manuscript_name="manuscript_name"
-    v-show="page === page_name"
+    v-show="annotationStore.currentPage === page_name"
   />
 </template>
