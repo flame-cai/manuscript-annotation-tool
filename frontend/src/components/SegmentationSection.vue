@@ -1,53 +1,35 @@
 <script setup>
 import { useAnnotationStore } from '@/stores/annotationStore'
-import { onMounted, useTemplateRef } from 'vue'
+import { ref, useTemplateRef } from 'vue'
+import SegmentationPoint from './SegmentationPoint.vue';
 
 const annotationStore = useAnnotationStore()
 const segmentationCanvas = useTemplateRef('segmentationCanvas')
-let points
+const points = ref();
 
+
+//need to make this work for different screen sizes
 function updateCanvasSize(width, height) {
-  // const container = document.querySelector('.segmentation-container')
-  // const maxWidth = container.clientWidth - 40
-  // const maxHeight = window.innerHeight - 200
-
-  // const scale = Math.min(maxWidth / width, maxHeight / height, 1)
-
-  // width *= scale
-  // height *= scale
-  // console.log(width, height)
-  segmentationCanvas.value.width = width
-  segmentationCanvas.value.height = height
+  segmentationCanvas.value.style.width = width / 2  + 'px';
+  segmentationCanvas.value.style.height = height / 2 + 'px';
 }
 
-function drawPoints() {
-  const ctx = segmentationCanvas.value.getContext('2d')
-  ctx.clearRect(0, 0, segmentationCanvas.value.width, segmentationCanvas.value.height)
-  points.forEach((point, index) => {
-    ctx.beginPath()
-    ctx.arc(point[0], point[1], 5, 0, Math.PI * 2)
-    ctx.fillStyle = 'gray'
-    ctx.fill()
+fetch(
+  import.meta.env.VITE_BACKEND_URL +
+    `/segment/${Object.keys(annotationStore.recognitions)[0]}/${annotationStore.currentPage}`,
+)
+  .then((response) => response.json())
+  .then((object) => {
+    points.value = object['points'].map((point) => [point[0], point[1]])
+    updateCanvasSize(object['dimensions'][0], object['dimensions'][1])
   })
-}
-
-onMounted(() => {
-  fetch(
-    import.meta.env.VITE_BACKEND_URL +
-      `/segment/${Object.keys(annotationStore.recognitions)[0]}/${annotationStore.currentPage}`,
-  )
-    .then((response) => response.json())
-    .then((object) => {
-      points = object['points']
-      updateCanvasSize(object['dimensions'][0], object['dimensions'][1])
-      drawPoints()
-    })
-})
 </script>
 
 <template>
   <div class="segmentation-container">
-    <canvas class="segmentation-canvas" ref="segmentationCanvas"></canvas>
+    <div class="segmentation-canvas" ref="segmentationCanvas">
+      <SegmentationPoint v-for="(point, index) in points" :key="index" :coordinates="point"/>
+    </div>
   </div>
 </template>
 
@@ -58,10 +40,10 @@ onMounted(() => {
   border-radius: 0.5em;
   padding: 0.5em;
   max-height: 85vh;
-  /* width: 100%; */
 }
 
 .segmentation-canvas {
   background-color: black;
+  position: relative;
 }
 </style>
