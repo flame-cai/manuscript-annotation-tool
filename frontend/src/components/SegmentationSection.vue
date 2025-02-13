@@ -5,13 +5,27 @@ import SegmentationPoint from './SegmentationPoint.vue'
 
 const annotationStore = useAnnotationStore()
 const segmentationCanvas = useTemplateRef('segmentationCanvas')
-const points = ref()
+const points = ref([])
+// const pointRefs = useTemplateRef('points');
 const isSelectMode = ref(false)
+const segments = ref([{segment: "segment " + 1, color: getRandomHexColor(), }])
+const currentSegment = ref(0);
 
 //need to make this work for different screen sizes
 function updateCanvasSize(width, height) {
   segmentationCanvas.value.style.width = width / 2 + 'px'
   segmentationCanvas.value.style.height = height / 2 + 'px'
+}
+
+function getRandomHexColor() {
+    return `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
+}
+
+function selectPoint(event) {
+  const point = event.index;
+  const segment = event.segment;
+  console.log(event, point, segment)
+  points.value[point]['segment'] = segment;
 }
 
 fetch(
@@ -20,8 +34,14 @@ fetch(
 )
   .then((response) => response.json())
   .then((object) => {
-    points.value = object['points'].map((point) => [point[0], point[1]])
+    // points.value = object['points'].map((point) => [point[0], point[1]])
     updateCanvasSize(object['dimensions'][0], object['dimensions'][1])
+    object['points'].forEach((point) => {
+      points.value.push({
+        coordinates: [point[0], point[1]],
+        segment: null,
+      })
+    })
   })
 
 function offSelectMode() {
@@ -38,6 +58,17 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <div class="mb-3">
+    <button class="btn btn-primary" @click="segments.push({segment: 'segment ' + (segments.length + 1), color: getRandomHexColor(), points: []})">Add Segment</button>
+    <div class="mb-3">
+      <label for="line" class="form-label">Line</label>
+      <select class="form-select" v-model="currentSegment">
+        <option v-for="(segment, index) in segments" :key="index" :value="index">
+          {{ segment.segment }}
+        </option>
+      </select>
+    </div>
+  </div>
   <div class="segmentation-container">
     <div
       class="segmentation-canvas"
@@ -48,8 +79,12 @@ onUnmounted(() => {
       <SegmentationPoint
         v-for="(point, index) in points"
         :key="index"
-        :coordinates="point"
+        :index="index"
+        :coordinates="point.coordinates"
         :isSelectMode="isSelectMode"
+        :brushSegment="currentSegment"
+        :brushColor="segments[currentSegment]['color']"
+        @selected="selectPoint"
       />
     </div>
   </div>
