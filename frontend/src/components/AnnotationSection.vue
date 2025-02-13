@@ -27,9 +27,8 @@ function uploadGroundTruth() {
 }
 
 function switchToSegmentation() {
-  router.push({'name': 'segment'})
+  router.push({ name: 'segment' })
 }
-
 </script>
 
 <template>
@@ -47,7 +46,12 @@ function switchToSegmentation() {
   </div>
   <div class="mb-3">
     <label for="page" class="form-label">Page</label>
-    <select class="form-select" id="page" v-model="annotationStore.currentPage" placeholder="Select a model">
+    <select
+      class="form-select"
+      id="page"
+      v-model="annotationStore.currentPage"
+      placeholder="Select a model"
+    >
       <option
         v-for="(page_data, page_name) in annotationStore.recognitions[manuscript_name]"
         :key="page_name"

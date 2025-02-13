@@ -5,13 +5,13 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAnnotationStore } from '@/stores/annotationStore'
 
-const annotationStore = useAnnotationStore();
+const annotationStore = useAnnotationStore()
 const uploadForm = ref()
 const manuscriptName = ref()
 const models = ref([])
 const modelSelected = ref('')
 
-const router = useRouter();
+const router = useRouter()
 
 fetch(import.meta.env.VITE_BACKEND_URL + '/models')
   .then((response) => response.json())
@@ -50,8 +50,8 @@ onMounted(() => {
       selected_model: selected_model,
       annotations: {},
     })
-    
-    router.push({name: 'annotation-section'})
+
+    router.push({ name: 'annotation-section' })
   })
 })
 

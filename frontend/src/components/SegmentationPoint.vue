@@ -11,7 +11,7 @@ onMounted(() => {
 
 function select() {
   if (props.isSelectMode) {
-    point.value.style.backgroundColor = 'white';
+    point.value.style.backgroundColor = 'white'
   }
 }
 </script>

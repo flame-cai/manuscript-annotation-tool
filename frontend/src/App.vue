@@ -11,7 +11,6 @@ setThemeBasedOnPreference()
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   setThemeBasedOnPreference()
 })
-
 </script>
 
 <template>

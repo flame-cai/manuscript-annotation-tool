@@ -28,11 +28,11 @@ function offSelectMode() {
   isSelectMode.value = false
 }
 
-document.addEventListener('mouseup', offSelectMode);
-window.addEventListener('blur', offSelectMode);
+document.addEventListener('mouseup', offSelectMode)
+window.addEventListener('blur', offSelectMode)
 
 onUnmounted(() => {
-  document.removeEventListener('mouseup', offSelectMode);
+  document.removeEventListener('mouseup', offSelectMode)
   window.removeEventListener('blur', offSelectMode)
 })
 </script>
