@@ -10,7 +10,6 @@ from annotator.recognition.model import Model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 class OCRConfig:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -142,6 +141,7 @@ def recognise_lines(
                 preds_size = torch.IntTensor([preds.size(1)] * batch_size)
                 _, preds_index = preds.max(2)
                 preds_str = converter.decode(preds_index, preds_size)
+                del preds_size, preds_index
             else:
                 preds = model(image, text_for_pred, is_train=False)
                 _, preds_index = preds.max(2)
@@ -166,5 +166,15 @@ def recognise_lines(
                         "confidence_score": confidence_score.item(),
                     }
                 )
+            del image, length_for_pred, text_for_pred, preds, preds_prob, preds_max_prob
+            if 'preds_size' in locals(): del preds_size
+            if 'preds_index' in locals(): del preds_index
+            torch.cuda.empty_cache()
+
+    
+    # clear GPU memory
+    del model
+    del demo_loader, AlignCollate_demo, demo_data
+    torch.cuda.empty_cache()
 
     return results
