@@ -5,6 +5,7 @@ export const useAnnotationStore = defineStore('annotations', () => {
   const modelName = ref()
   const recognitions = ref({})
   const userAnnotations = ref([])
+  const currentPage = ref();
 
   function levenshteinDistance(str1 = '', str2 = '') {
     const track = Array(str2.length + 1)
@@ -50,7 +51,7 @@ export const useAnnotationStore = defineStore('annotations', () => {
     userAnnotations.value = {}
   }
 
-  return { recognitions, userAnnotations, modelName, calculateLevenshteinDistances, reset }
+  return { recognitions, userAnnotations, modelName, currentPage, calculateLevenshteinDistances, reset }
 })
 
 if (import.meta.hot) {

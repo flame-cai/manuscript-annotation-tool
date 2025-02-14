@@ -22,15 +22,20 @@ const router = createRouter({
         {
           path: '/annotation/annotate',
           name: 'annotation-section',
-          component: () => import('../components/AnnotationSection.vue')
-        }
-      ]
+          component: () => import('../components/AnnotationSection.vue'),
+        },
+        {
+          path: '/annotation/segment',
+          name: 'segment',
+          component: () => import('../components/SegmentationSection.vue'),
+        },
+      ],
     },
     {
       path: '/uploads',
       name: 'uploaded-manuscripts',
       component: () => import('../views/UploadedManuscriptsView.vue'),
-    }
+    },
   ],
 })
 

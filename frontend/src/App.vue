@@ -11,14 +11,11 @@ setThemeBasedOnPreference()
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   setThemeBasedOnPreference()
 })
-
 </script>
 
 <template>
   <main>
     <RouterView />
-    <!-- <UploadForm v-if="!isUploaded" @upload="uploaded" />
-    <AnnotationSection :recognitions="recognitions" @annotated="isUploaded = false" v-else /> -->
   </main>
 </template>
 
