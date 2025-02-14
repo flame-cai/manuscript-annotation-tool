@@ -2,11 +2,16 @@
 import Dropzone from 'dropzone'
 
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAnnotationStore } from '@/stores/annotationStore'
 
+const annotationStore = useAnnotationStore()
 const uploadForm = ref()
 const manuscriptName = ref()
 const models = ref([])
 const modelSelected = ref('')
+
+const router = useRouter()
 
 fetch(import.meta.env.VITE_BACKEND_URL + '/models')
   .then((response) => response.json())
@@ -21,13 +26,38 @@ onMounted(() => {
     parallelUploads: Infinity,
   })
   uploadForm.value.on('completemultiple', function (files) {
-    emit('upload', JSON.parse(files[0].xhr.response))
+    // emit('upload', JSON.parse(files[0].xhr.response))
+    const response = JSON.parse(files[0].xhr.response)
+    const manuscript_name = Object.values(response)[0][0].manuscript_name
+    const selected_model = Object.values(response)[0][0].selected_model
+    annotationStore.recognitions[manuscript_name] = {}
+
+    for (const page of Object.keys(response)) {
+      annotationStore.recognitions[manuscript_name][page] = {}
+      for (const line in response[page]) {
+        const line_name = response[page][line]['line']
+        annotationStore.recognitions[manuscript_name][page][line_name] = {}
+        annotationStore.recognitions[manuscript_name][page][line_name]['predicted_label'] =
+          response[page][line]['predicted_label']
+        annotationStore.recognitions[manuscript_name][page][line_name]['image_path'] =
+          response[page][line]['image_path']
+        annotationStore.recognitions[manuscript_name][page][line_name]['confidence_score'] =
+          response[page][line]['confidence_score']
+      }
+    }
+    annotationStore.userAnnotations.push({
+      manuscript_name: manuscript_name,
+      selected_model: selected_model,
+      annotations: {},
+    })
+
+    router.push({ name: 'annotation-section' })
   })
 })
 
 const UPLOAD_URL = import.meta.env.VITE_BACKEND_URL + '/upload-manuscript'
 
-const emit = defineEmits(['upload'])
+// const emit = defineEmits(['upload'])
 </script>
 
 <template>
