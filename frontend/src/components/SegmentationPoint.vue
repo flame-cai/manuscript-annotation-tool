@@ -1,14 +1,14 @@
 <script setup>
 import { onMounted, useTemplateRef } from 'vue'
 
-const props = defineProps(['coordinates', 'isSelectMode', 'brushSegment', 'brushColor', 'index']);
-const emit = defineEmits(['selected',]);
-const point = useTemplateRef('point');
+const props = defineProps(['coordinates', 'isSelectMode', 'brushSegment', 'brushColor', 'index'])
+const emit = defineEmits(['selected'])
+const point = useTemplateRef('point')
 
 function select() {
   if (props.isSelectMode) {
-    point.value.style.backgroundColor = props.brushColor;
-    emit('selected', {segment: props.brushSegment, index: props.index});
+    point.value.style.backgroundColor = props.brushColor
+    emit('selected', { segment: props.brushSegment, index: props.index })
   }
 }
 
@@ -16,8 +16,6 @@ onMounted(() => {
   point.value.style.left = props.coordinates[0] + 'px'
   point.value.style.top = props.coordinates[1] + 'px'
 })
-
-
 </script>
 
 <template>

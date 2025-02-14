@@ -5,6 +5,7 @@ from flask import Blueprint, request, send_from_directory, current_app
 from PIL import Image
 
 from annotator.segmentation import segment_lines
+from annotator.manual_segmentation import run_manual_segmentation
 from annotator.recognition.recognition import recognise_characters
 from annotator.finetune.finetune import finetune
 
@@ -107,3 +108,18 @@ def get_points(manuscript_name, page):
 
     except Exception as e:
         return {"error": str(e)}, 500
+
+
+@bp.route("/segment/<string:manuscript_name>/<string:page>", methods=["POST"])
+def make_segments(manuscript_name, page):
+    segments = request.get_json()
+    labels_file = os.path.join(
+        BASE_PATH, manuscript_name, "points-2D", f"{page}_labels.txt"
+    )
+
+    with open(labels_file, "w") as f:
+        f.write("\n".join(map(str, segments)))
+
+    run_manual_segmentation(manuscript_name, page)
+
+    return {"message": f"succesfully saved labels for page {page}"}, 200
