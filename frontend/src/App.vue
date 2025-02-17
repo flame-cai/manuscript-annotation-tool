@@ -18,9 +18,3 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
     <RouterView />
   </main>
 </template>
-
-<style>
-button {
-  margin-top: 0.5em;
-}
-</style>
