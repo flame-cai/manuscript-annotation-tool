@@ -146,7 +146,6 @@ onUnmounted(() => {
   border: var(--bs-border-width) solid var(--bs-border-color);
   border-radius: 0.5em;
   padding: 0.5em;
-  max-height: 85vh;
 }
 
 .segmentation-canvas {
