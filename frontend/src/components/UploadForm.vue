@@ -26,7 +26,6 @@ onMounted(() => {
     parallelUploads: Infinity,
   })
   uploadForm.value.on('completemultiple', function (files) {
-    // emit('upload', JSON.parse(files[0].xhr.response))
     const response = JSON.parse(files[0].xhr.response)
     const manuscript_name = Object.values(response)[0][0].manuscript_name
     const selected_model = Object.values(response)[0][0].selected_model
@@ -57,7 +56,6 @@ onMounted(() => {
 
 const UPLOAD_URL = import.meta.env.VITE_BACKEND_URL + '/upload-manuscript'
 
-// const emit = defineEmits(['upload'])
 </script>
 
 <template>
@@ -77,5 +75,16 @@ const UPLOAD_URL = import.meta.env.VITE_BACKEND_URL + '/upload-manuscript'
     <input type="hidden" name="manuscript_name" :value="manuscriptName" />
     <input type="hidden" name="model" :value="modelSelected" />
   </form>
-  <button @click="uploadForm.processQueue()" class="btn btn-primary">Submit</button>
+  <button @click="uploadForm.processQueue()" class="btn btn-primary mt-3">Submit</button>
 </template>
+
+<style>
+
+form.dropzone {
+  background-color: var(--bs-body-bg);
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  color: var(--bs-body-color);
+  font-family: inherit;
+}
+
+</style>

@@ -14,13 +14,5 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 </script>
 
 <template>
-  <main>
-    <RouterView />
-  </main>
+  <RouterView />
 </template>
-
-<style>
-button {
-  margin-top: 0.5em;
-}
-</style>
