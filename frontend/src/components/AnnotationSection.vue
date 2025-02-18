@@ -6,7 +6,7 @@ import { useAnnotationStore } from '@/stores/annotationStore'
 const router = useRouter()
 const annotationStore = useAnnotationStore()
 const manuscript_name = Object.keys(annotationStore.recognitions)[0]
-annotationStore.currentPage = annotationStore.recognitions[manuscript_name][0]
+annotationStore.currentPage = Object.keys(annotationStore.recognitions[manuscript_name])[0]
 
 function uploadGroundTruth() {
   annotationStore.calculateLevenshteinDistances()
