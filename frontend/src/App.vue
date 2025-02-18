@@ -14,7 +14,5 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 </script>
 
 <template>
-  <main>
-    <RouterView />
-  </main>
+  <RouterView />
 </template>
