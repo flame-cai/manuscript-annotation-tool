@@ -3,8 +3,16 @@ import { RouterView } from 'vue-router'
 </script>
 
 <template>
-  <header>
-    <h1>Manuscript Annotation Tool</h1>
-  </header>
-  <RouterView />
+  <div class="annotationView-container">
+    <header>
+      <h1>Manuscript Annotation Tool</h1>
+    </header>
+    <RouterView />
+  </div>
 </template>
+
+<style>
+.annotationView-container {
+  padding: 1em;
+}
+</style>
