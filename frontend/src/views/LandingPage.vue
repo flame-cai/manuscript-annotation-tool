@@ -7,7 +7,7 @@ const landingPage = useCssModule()
 <template>
   <div :class="landingPage['landing-container']">
     <header>
-      <img src="../../public/flame-logo.svg" alt="Flame logo" :class="landingPage.logo" />
+      <img src="/flame-logo.svg" alt="Flame logo" :class="landingPage.logo" />
       <h1>Manuscript Annotation Tool</h1>
     </header>
     <main :class="landingPage.main">
