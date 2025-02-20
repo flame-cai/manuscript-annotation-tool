@@ -1,8 +1,9 @@
 import os
 import subprocess
+import torch
 
 from datetime import datetime
-import torch
+from flask import current_app
 
 from annotator.recognition.demo import recognise_lines
 from annotator.models import db, RecognitionLog
@@ -30,7 +31,7 @@ def recognise_characters(folder_path, model, manuscript_name):
     for page_subfolder in page_subfolders:
         lines_of_one_page = recognise_lines(
             image_folder=os.path.join(lines_folder_path, page_subfolder),
-            saved_model=f"/mnt/cai-data/manuscript-annotation-tool/models/recognition/{model}",
+            saved_model=os.path.join(current_app.config['DATA_PATH'], 'models', 'recognition', model),
             transformation=None,
             feature_extraction="ResNet",
             sequence_modeling="BiLSTM",
