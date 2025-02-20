@@ -4,3 +4,4 @@ instance
 backend/temp
 backend/saved_models
 test.py
+backend/.env

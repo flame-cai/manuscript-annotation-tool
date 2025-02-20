@@ -2,7 +2,9 @@ import os
 import shutil
 import numpy as np
 import cv2
+
 from skimage import io
+from flask import current_app
 
 
 def gen_bounding_boxes(det, binarize_threshold):
@@ -219,7 +221,7 @@ def gen_line_images(img2, unique_labels, bounding_boxes):
 
 
 def run_manual_segmentation(manuscript_name, page):
-    BASE_PATH = "/mnt/cai-data/manuscript-annotation-tool/manuscripts"
+    BASE_PATH = os.path.join(current_app.config['DATA_PATH'], 'manuscripts')
     IMAGE_FILEPATH = os.path.join(BASE_PATH, manuscript_name, "leaves", f"{page}.jpg")
     HEATMAP_FILEPATH = os.path.join(BASE_PATH, manuscript_name, "heatmaps", f"{page}.jpg")
     POINTS_FILEPATH = os.path.join(BASE_PATH, manuscript_name, "points-2D", f"{page}_points.txt")

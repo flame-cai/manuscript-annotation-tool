@@ -12,8 +12,6 @@ from annotator.finetune.utils import AttrDict
 from annotator.finetune.train import train
 from annotator.models import db, UserAnnotationLog
 
-BASE_PATH = "/mnt/cai-data/manuscript-annotation-tool/manuscripts"
-
 
 def get_config(file_path, manuscript_name, selected_model, model_name):
     with open(file_path, "r", encoding="utf-8") as stream:
@@ -21,15 +19,18 @@ def get_config(file_path, manuscript_name, selected_model, model_name):
     opt = AttrDict(opt)
     opt.character = opt.number + opt.symbol + opt.lang_char
     opt.manuscript_name = manuscript_name
-    opt.saved_model = (
-        f"/mnt/cai-data/manuscript-annotation-tool/models/recognition/{selected_model}"
+    opt.saved_model = os.path.join(
+        os.path.join(current_app.config['DATA_PATH']), "models", "recognition", selected_model,
     )
     opt.model_name = model_name
+    # This creates place for logfile. Need to keep this in mind when transitioning logs from .txt to database
     os.makedirs(f"./saved_models/{opt.model_name}", exist_ok=True)
     return opt
 
 
 def finetune(data):
+    MANUSCRIPTS_PATH = os.path.join(current_app.config['DATA_PATH'], 'manuscripts')
+
     manuscript_name = data[0]["manuscript_name"]
     annotations = data[0]["annotations"]
     selected_model = data[0]["selected_model"]
@@ -63,7 +64,7 @@ def finetune(data):
         for line in annotations[page]:
             ground_truth = annotations[page][line]["ground_truth"]
             image_path = os.path.join(
-                BASE_PATH, manuscript_name, "lines", page, line + ".jpg"
+                MANUSCRIPTS_PATH, manuscript_name, "lines", page, line + ".jpg"
             )
             filename = os.path.basename(image_path)
 
