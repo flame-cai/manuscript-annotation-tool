@@ -22,8 +22,8 @@ dependencies:
   - blinker=1.6.2=py312h06a4308_0
   - brotli-python=1.0.9=py312h6a678d5_7
   - bzip2=1.0.8=h5eee18b_5
-  - ca-certificates=2024.11.26=h06a4308_0
-  - certifi=2024.12.14=py312h06a4308_0
+  - ca-certificates=2024.12.31=h06a4308_0
+  - certifi=2025.1.31=py312h06a4308_0
   - cffi=1.16.0=py312h5eee18b_0
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
   - click=8.1.7=py312h06a4308_0
@@ -136,9 +136,11 @@ dependencies:
   - pysocks=1.7.1=py312h06a4308_0
   - python=3.12.2=hab00c5b_0_cpython
   - python-dateutil=2.9.0.post0=pyhff2d567_1
+  - python-dotenv=0.21.0=py312h06a4308_0
   - python-fastjsonschema=2.16.2=py312h06a4308_0
   - python-json-logger=2.0.7=py312h06a4308_0
   - python_abi=3.12=4_cp312
+  - pytz=2024.1=py312h06a4308_0
   - pyyaml=6.0.1=py312h5eee18b_0
   - pyzmq=25.1.2=py312h6a678d5_0
   - qt-main=5.15.2=h7358343_9
@@ -247,7 +249,6 @@ dependencies:
       - pymupdfb==1.24.9
       - pyparsing==3.1.2
       - python-bidi==0.4.2
-      - pytz==2024.1
       - regex==2024.4.16
       - rich==13.7.1
       - scikit-image==0.23.2
