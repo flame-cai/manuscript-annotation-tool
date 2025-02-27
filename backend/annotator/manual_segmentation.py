@@ -82,77 +82,150 @@ def loadImage(img_file):
     return img
 
 
-def assign_labels_and_plot(
-    bounding_boxes, points, labels, image, output_path="output.png"
-):
-    # Convert image to color (if grayscale)
+def assign_labels_and_plot(bounding_boxes, points, labels, image, output_path="output.png"):
+    """
+    Assigns labels to given bounding boxes based on the labels of the points they contain. 
+    If a bounding box contains points with different labels (typically in tall boxes),
+    the bounding box is split maximally along the vertical direction into non-overlapping 
+    sub-boxes such that each sub-box contains points of only one label. The result is visualized 
+    by overlaying both the bounding boxes and the labeled points on the image.
+    """
+    import cv2
+
+    # Convert image to color if it is grayscale.
     if len(image.shape) == 2:
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
     labeled_bboxes = []
-    no_entry_again = []
     for bbox in bounding_boxes:
         x_min, y_min, w, h = bbox
         x_max, y_max = x_min + w, y_min + h
 
-        # Find labels of points inside this bounding box
-        assigned_label = []
-        for (px, py), label in zip(points, labels):
-            if x_min <= px <= x_max and y_min <= py <= y_max:
-                assigned_label.append(label)  # Assign the first found label
-                # break  # Stop checking once a label is assigned
+        # Gather points (with labels) inside the bounding box.
+        pts_in_bbox = [
+            (px, py, lab)
+            for (px, py), lab in zip(points, labels)
+            if x_min <= px <= x_max and y_min <= py <= y_max
+        ]
 
-        if len(set(assigned_label)) == 1:  # IF ONLY ONE LABEL PER BOUNDING BOX
-            labeled_bboxes.append((x_min, y_min, w, h, assigned_label[0]))
-            # Draw bounding box
-            cv2.rectangle(
-                image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2
-            )  # Green box
-            cv2.putText(
-                image,
-                str(assigned_label[0]),
-                (x_min, y_min - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 255, 0),
-                2,
-            )
+        # If all points inside have the same label, draw the original box (green).
+        if pts_in_bbox and len({lab for (_, _, lab) in pts_in_bbox}) == 1:
+            bbox_label = pts_in_bbox[0][2]
+            labeled_bboxes.append((x_min, y_min, w, h, bbox_label))
+            cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+            cv2.putText(image, str(bbox_label), (x_min, y_min - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-        # handle tall bounding boxes
-        # elif len(set(assigned_label))> 1:
-        #     divide_by = len(set(assigned_label))
-        #     print(f"dividing by: {divide_by}")
-        #     unit = int(h/divide_by)
-        #     h = unit
-        #     y_start = y_min
+        # Handle boxes with multiple labels: split maximally along the vertical axis.
+        elif pts_in_bbox:
+            # Sort points by vertical (y) coordinate.
+            pts_in_bbox.sort(key=lambda p: p[1])
+            boundaries = [y_min]
+            prev_label = pts_in_bbox[0][2]
 
-        #     for i in range(divide_by):
-        #         print(divide_by)
-        #         print(f"YOOO:{(x_min,y_start, w, h)}")
-        #         if (x_min,y_start,w) not in no_entry_again:
-        #             bounding_boxes.append((x_min,y_start, w, h))
-        #             no_entry_again.append((x_min,y_start,w))
-        #         y_start = y_start + unit
-        #         h = h + unit
+            # Compute split boundaries at label change.
+            for i in range(1, len(pts_in_bbox)):
+                current_label = pts_in_bbox[i][2]
+                if current_label != prev_label:
+                    boundary = int((pts_in_bbox[i-1][1] + pts_in_bbox[i][1]) / 2)
+                    boundary = max(boundary, y_min)
+                    boundary = min(boundary, y_max)
+                    boundaries.append(boundary)
+                    prev_label = current_label
+            boundaries.append(y_max)
 
-    # Draw points with labels
+            # Create sub-boxes based on the computed boundaries.
+            for idx in range(1, len(boundaries)):
+                seg_top = boundaries[idx - 1]
+                seg_bottom = boundaries[idx]
+                seg_label = None
+                for (px, py, lab) in pts_in_bbox:
+                    if seg_top <= py <= seg_bottom:
+                        seg_label = lab
+                        break
+                if seg_label is not None:
+                    new_h = seg_bottom - seg_top
+                    labeled_bboxes.append((x_min, seg_top, w, new_h, seg_label))
+                    cv2.rectangle(image, (x_min, seg_top), (x_max, seg_bottom), (0, 0, 255), 2)
+                    cv2.putText(image, str(seg_label), (x_min, seg_top - 5),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+    # Draw all points with their labels.
     for (px, py), label in zip(points, labels):
         if label is not None:
-            cv2.circle(image, (px, py), 5, (0, 0, 255), -1)  # Red point
-            cv2.putText(
-                image,
-                str(label),
-                (px + 5, py - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 0, 255),
-                2,
-            )
-    # Save image
+            cv2.circle(image, (px, py), 5, (0, 0, 255), -1)
+            cv2.putText(image, str(label), (px + 5, py - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
     cv2.imwrite(output_path, image)
     print(f"Annotated image saved as: {output_path}")
 
-    return labeled_bboxes  # List of (x, y, w, h, label)
+    return labeled_bboxes
+
+
+# def assign_labels_and_plot(
+#     bounding_boxes, points, labels, image, output_path="output.png"
+# ):
+#     """
+#     Assigns labels to given bounding boxes based on the labels of the points they contain. if
+#     a bounding box contains more than one points with different labels, the bounding box is split
+#     such that the split bounding boxes only have points of one label. We also 
+#     visualizes the result by overlaying the bounding boxes and labeled points on the image.
+#     """
+#     # Convert image to color (if grayscale)
+#     if len(image.shape) == 2:
+#         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+#     labeled_bboxes = []
+#     for bbox in bounding_boxes:
+#         x_min, y_min, w, h = bbox
+#         x_max, y_max = x_min + w, y_min + h
+
+#         # Find labels of points inside this bounding box
+#         assigned_label = []
+#         for (px, py), label in zip(points, labels):
+#             if x_min <= px <= x_max and y_min <= py <= y_max:
+#                 assigned_label.append(label)  # Assign the first found label
+#                 # break  # Stop checking once a label is assigned
+
+#         if len(set(assigned_label)) == 1:  # IF ONLY ONE LABEL PER BOUNDING BOX
+#             labeled_bboxes.append((x_min, y_min, w, h, assigned_label[0]))
+#             # Draw bounding box
+#             cv2.rectangle(
+#                 image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2
+#             )  # Green box
+#             cv2.putText(
+#                 image,
+#                 str(assigned_label[0]),
+#                 (x_min, y_min - 5),
+#                 cv2.FONT_HERSHEY_SIMPLEX,
+#                 0.5,
+#                 (0, 255, 0),
+#                 2,
+#             )
+
+
+#         # TODO handle tall bounding boxes who contain points with more than one labels
+#         # elif len(set(assigned_label)) >1:
+
+#     # Draw points with labels
+#     for (px, py), label in zip(points, labels):
+#         if label is not None:
+#             cv2.circle(image, (px, py), 5, (0, 0, 255), -1)  # Red point
+#             cv2.putText(
+#                 image,
+#                 str(label),
+#                 (px + 5, py - 5),
+#                 cv2.FONT_HERSHEY_SIMPLEX,
+#                 0.5,
+#                 (0, 0, 255),
+#                 2,
+#             )
+#     # Save image
+#     cv2.imwrite(output_path, image)
+#     print(f"Annotated image saved as: {output_path}")
+
+#     return labeled_bboxes  # List of (x, y, w, h, label)
 
 
 def crop_img(img):
