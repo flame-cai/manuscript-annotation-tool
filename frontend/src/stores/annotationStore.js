@@ -1,5 +1,6 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { ref } from 'vue'
+import * as zip from "@zip.js/zip.js";
 
 export const useAnnotationStore = defineStore('annotations', () => {
   const modelName = ref()
@@ -45,13 +46,34 @@ export const useAnnotationStore = defineStore('annotations', () => {
     }
   }
 
+  function exportToTxt() {
+    const zipWriter = new zip.ZipWriter(new zip.BlobWriter("application/zip"));
+    const manuscript_name = Object.keys(recognitions.value)[0];
+    Object.keys(recognitions.value[manuscript_name]).forEach(pageName => {
+      let lines = ""
+      Object.keys(recognitions.value[manuscript_name][pageName]).forEach(lineNumber => {
+        lines += (recognitions.value[manuscript_name][pageName][lineNumber]['predicted_label']) + "\n";
+      })
+      zipWriter.add(`${pageName}.txt`, new zip.TextReader(lines));
+    })
+    zipWriter.close().then(blob => {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${manuscript_name}_recognitions.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+  }
+
   function reset() {
     modelName.value = null
     recognitions.value = {}
-    userAnnotations.value = {}
+    userAnnotations.value = []
   }
 
-  return { recognitions, userAnnotations, modelName, currentPage, calculateLevenshteinDistances, reset }
+  return { recognitions, userAnnotations, modelName, currentPage, calculateLevenshteinDistances, exportToTxt, reset }
 })
 
 if (import.meta.hot) {
