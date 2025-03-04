@@ -42,7 +42,8 @@ function switchToSegmentation() {
   </div>
   <div class="mb-3">
     <button class="btn btn-primary me-2" @click="uploadGroundTruth">Fine-tune</button>
-    <button class="btn btn-warning" @click="switchToSegmentation">Correct Image Segments</button>
+    <button class="btn btn-warning me-2" @click="switchToSegmentation">Correct Image Segments</button>
+    <button class="btn btn-success" @click="annotationStore.exportToTxt">Export</button>
   </div>
   <div class="mb-3">
     <label for="page" class="form-label">Page</label>

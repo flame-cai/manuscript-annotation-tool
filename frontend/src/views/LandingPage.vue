@@ -1,7 +1,10 @@
 <script setup>
+import { useAnnotationStore } from '@/stores/annotationStore';
 import { useCssModule } from 'vue'
 import { RouterLink } from 'vue-router'
 const landingPage = useCssModule()
+const annotationStore = useAnnotationStore();
+annotationStore.reset()
 </script>
 
 <template>
