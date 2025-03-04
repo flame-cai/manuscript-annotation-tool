@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 import AnnotationPage from '@/components/AnnotationPage.vue'
 import { useAnnotationStore } from '@/stores/annotationStore'
+import CharacterPalette from './characterPalette.vue'
 
 const router = useRouter()
 const annotationStore = useAnnotationStore()
@@ -43,7 +44,8 @@ function switchToSegmentation() {
   <div class="mb-3">
     <button class="btn btn-primary me-2" @click="uploadGroundTruth">Fine-tune</button>
     <button class="btn btn-warning me-2" @click="switchToSegmentation">Correct Image Segments</button>
-    <button class="btn btn-success" @click="annotationStore.exportToTxt">Export</button>
+    <button class="btn btn-success me-2" @click="annotationStore.exportToTxt">Export</button>
+    <CharacterPalette />
   </div>
   <div class="mb-3">
     <label for="page" class="form-label">Page</label>
