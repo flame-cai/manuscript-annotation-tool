@@ -3,7 +3,7 @@ import { reactive, ref, watch } from 'vue'
 import Sanscript from '@indic-transliteration/sanscript'
 import { useAnnotationStore } from '@/stores/annotationStore'
 
-const BASE_PATH = 'http://localhost:5000/line-images'
+const BASE_PATH = `${import.meta.env.VITE_BACKEND_URL}/line-images`
 
 const props = defineProps(['line_name', 'line_data', 'page_name', 'manuscript_name'])
 const annotationStore = useAnnotationStore()
