@@ -41,56 +41,69 @@ function save() {
   textboxClassObject['is-valid'] = true
 }
 
-// Custom backspace handler
 function handleBackspace(event) {
-  // Check if the key pressed is Backspace
   if (event.key === 'Backspace') {
     const input = event.target
     const cursorPosition = input.selectionStart
     const currentValue = input.value
 
-    // Check if cursor is at least 2 characters from the start
-    if (cursorPosition < 2) return
+    // Check if we have enough characters to check
+    if (cursorPosition < 3) return
 
-    // Check if the character two indices behind the cursor is a halant (U+094D)
+    // Define special characters
     const halantCharacter = '\u094D' // Devanagari Halant
-    const characterBeforeHalant = currentValue[cursorPosition - 3]
-    const characterAtHalantPosition = currentValue[cursorPosition - 2]
+    const zwnj = '\u200C' // Zero-Width Non-Joiner
 
-    // If the character two indices behind is NOT a halant, use default backspace
-    if (characterAtHalantPosition !== halantCharacter) {
+    // Get characters at specific positions
+    const characterAtHalantPosition = currentValue[cursorPosition - 2]
+    const characterRelativeMinus1 = currentValue[cursorPosition - 1]
+    const characterRelativeMinus2 = currentValue[cursorPosition - 3]
+
+    // Condition 1: Special ZWNJ handling when halant is two indices behind
+    if (characterAtHalantPosition === halantCharacter) {
+      event.preventDefault()
+
+      const prevFiveChars = currentValue.slice(Math.max(0, cursorPosition - 5), cursorPosition)
+
+      const newValue = 
+        currentValue.slice(0, cursorPosition - 1) + 
+        '\u200C' + 
+        currentValue.slice(cursorPosition)
+
+      devanagari.value = newValue
+
+      input.value = newValue
+      input.setSelectionRange(cursorPosition, cursorPosition)
+
+      const afterFiveChars = newValue.slice(Math.max(0, cursorPosition - 5), cursorPosition)
+
+      console.log('Conditional Backspace (Halant Case):', {
+        beforeDeletion: {
+          value: currentValue,
+          prevFiveChars: prevFiveChars,
+          cursorPosition: cursorPosition
+        },
+        afterDeletion: {
+          value: newValue,
+          nextFiveChars: afterFiveChars,
+          cursorPosition: cursorPosition
+        }
+      })
       return
     }
 
-    // Prevent default backspace behavior
-    event.preventDefault()
-
-    // Remove the character before the cursor and insert ZWNJ
-    const newValue = 
-      currentValue.slice(0, cursorPosition - 1) + 
-      '\u200C' + 
-      currentValue.slice(cursorPosition)
-
-    // Update the value
-    devanagari.value = newValue
-
-    // Set cursor position back to where it was
-    input.value = newValue
-    input.setSelectionRange(cursorPosition, cursorPosition)
-
-    // Log for debugging
-    console.log('Conditional Backspace pressed:', {
-      originalValue: currentValue,
-      newValue: newValue,
-      insertedZWNJ: true,
-      cursorPosition: cursorPosition,
-      characterBeforeHalant: characterBeforeHalant,
-      characterAtHalantPosition: characterAtHalantPosition
-    })
+    // Condition 2: Default backspace when ZWNJ is at relative -1 and halant is at relative -2
+    if (
+      characterRelativeMinus1 === zwnj && 
+      characterRelativeMinus2 === halantCharacter
+    ) {
+      // Do nothing, allow default backspace behavior
+      console.log('Default Backspace (ZWNJ after Halant)')
+      return
+    }
   }
 }
 
-// Add event listener on component mount
 onMounted(() => {
   if (devanagariInput.value) {
     devanagariInput.value.addEventListener('keydown', handleBackspace)
