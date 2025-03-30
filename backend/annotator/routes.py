@@ -142,12 +142,44 @@ def make_semi_segments(manuscript_name, page):
     labels_file = os.path.join(
         MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_labels.txt"
     )
-    
+
     print(f"just in semi segmentation {labels_file}")
 
+    # okay so the segments are now being labelled manually, instead we now need to do em semi-manually!!
     # with open(labels_file, "w") as f:
     #     f.write("\n".join(map(str, segments)))
 
     #run_manual_segmentation(manuscript_name, page)
 
     return {"message": f"semi segmentation testing for {page}"}, 200
+
+
+
+@bp.route("/semi-segment/<string:manuscript_name>/<string:page>", methods=["GET"])
+def get_points_and_graph(manuscript_name, page):
+    MANUSCRIPTS_PATH = os.path.join(current_app.config['DATA_PATH'], 'manuscripts')
+    try:
+        print("YOOOO getting points the alternate wayyy")
+        IMAGE_FILEPATH = os.path.join(
+            MANUSCRIPTS_PATH, manuscript_name, "leaves", f"{page}.jpg"
+        )
+        image = Image.open(IMAGE_FILEPATH)
+        width, height = image.size
+        response = {"dimensions": [width, height]}
+        POINTS_FILEPATH = os.path.join(
+            MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_points.txt"
+        )
+        if not os.path.exists(POINTS_FILEPATH):
+            return {"error": "Page not found"}, 404
+        with open(POINTS_FILEPATH, "r") as f:
+            points = [row.split() for row in f.readlines()]
+        # get points
+        # make the graph
+        # save the graph
+        # in response have labelled_adjacency_matrix, and feature_matrix
+
+        response["points"] = points
+        return response, 200
+
+    except Exception as e:
+        return {"error": str(e)}, 500

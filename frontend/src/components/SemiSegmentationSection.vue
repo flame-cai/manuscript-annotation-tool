@@ -50,7 +50,7 @@ function offSelectMode() {
 
 fetch(
   import.meta.env.VITE_BACKEND_URL +
-    `/segment/${Object.keys(annotationStore.recognitions)[0]}/${annotationStore.currentPage}`,
+    `/semi-segment/${Object.keys(annotationStore.recognitions)[0]}/${annotationStore.currentPage}`,
 )
   .then((response) => response.json())
   .then((object) => {
