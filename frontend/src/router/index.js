@@ -29,6 +29,11 @@ const router = createRouter({
           name: 'segment',
           component: () => import('../components/SegmentationSection.vue'),
         },
+        {
+          path: '/annotation/segment',
+          name: 'semi-segment',
+          component: () => import('../components/SemiSegmentationSection.vue'),
+        },
       ],
     },
     {

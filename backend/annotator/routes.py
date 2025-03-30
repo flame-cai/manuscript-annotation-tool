@@ -133,3 +133,21 @@ def make_segments(manuscript_name, page):
     run_manual_segmentation(manuscript_name, page)
 
     return {"message": f"succesfully saved labels for page {page}"}, 200
+
+
+@bp.route("/semi-segment/<string:manuscript_name>/<string:page>", methods=["POST"])
+def make_semi_segments(manuscript_name, page):
+    MANUSCRIPTS_PATH = os.path.join(current_app.config['DATA_PATH'], 'manuscripts')
+    segments = request.get_json()
+    labels_file = os.path.join(
+        MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_labels.txt"
+    )
+    
+    print(f"just in semi segmentation {labels_file}")
+
+    # with open(labels_file, "w") as f:
+    #     f.write("\n".join(map(str, segments)))
+
+    #run_manual_segmentation(manuscript_name, page)
+
+    return {"message": f"semi segmentation testing for {page}"}, 200
