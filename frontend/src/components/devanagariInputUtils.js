@@ -2,11 +2,10 @@
 export function logCharactersBeforeCursor(input) {
   const cursorPosition = input.selectionStart;
   const currentValue = input.value;
-  console.log("------")
   console.log({
-    characterRelativeMinus1: currentValue[cursorPosition - 1],
-    characterRelativeMinus2: currentValue[cursorPosition - 2],
-    characterRelativeMinus3: currentValue[cursorPosition - 3]
+    '-3': currentValue[cursorPosition - 3],
+    '-2': currentValue[cursorPosition - 2],
+    '-1': currentValue[cursorPosition - 1]
   });
     return
 }
@@ -20,17 +19,17 @@ export function handleBackspace(event, devanagariRef) {
     // console.log("currentValue:", currentValue);
     
     // Get characters at specific positions
-    console.log("");
+    console.log("-------------------------");
     const characterRelativeMinus1 = currentValue[cursorPosition - 1]
     const characterRelativeMinus2 = currentValue[cursorPosition - 2]
     const characterRelativeMinus3 = currentValue[cursorPosition - 3]
     console.log({
-      characterRelativeMinus1: currentValue[cursorPosition - 1],
-      characterRelativeMinus2: currentValue[cursorPosition - 2],
-      characterRelativeMinus3: currentValue[cursorPosition - 3]
+      '-3': currentValue[cursorPosition - 3],
+      '-2': currentValue[cursorPosition - 2],
+      '-1': currentValue[cursorPosition - 1]
     });
     // function ends
-    console.log("------");
+
 
     // Define special characters
     const halantCharacter = '\u094D' // Devanagari Halant
@@ -93,6 +92,19 @@ export function handleBackspace(event, devanagariRef) {
   
         input.value = newValue
         input.setSelectionRange(cursorPosition, cursorPosition)
+        logCharactersBeforeCursor(input);
+        return
+      }
+      else {
+        event.preventDefault()
+        const newValue = 
+          currentValue.slice(0, cursorPosition - 1) + 
+          currentValue.slice(cursorPosition)
+        // Update the ref value
+        devanagariRef.value = newValue
+  
+        input.value = newValue
+        input.setSelectionRange(cursorPosition-1, cursorPosition-1)
         logCharactersBeforeCursor(input);
         return
       }

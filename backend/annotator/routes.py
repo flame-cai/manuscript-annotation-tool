@@ -173,13 +173,16 @@ def get_points_and_graph(manuscript_name, page):
             return {"error": "Page not found"}, 404
         with open(POINTS_FILEPATH, "r") as f:
             points = [row.split() for row in f.readlines()]
+        # TODO
         # get points
-        # make the graph
-        # save the graph
-        # in response have labelled_adjacency_matrix, and feature_matrix
+        # apply backend logic
+        # save the graph, and send it as the response
+        # 
 
         response["points"] = points
         return response, 200
 
     except Exception as e:
         return {"error": str(e)}, 500
+
+        
