@@ -192,12 +192,16 @@ def get_points_and_graph(manuscript_name, page):
             MANUSCRIPTS_PATH, manuscript_name, "leaves", f"{page}.jpg"
         )
         image = Image.open(IMAGE_FILEPATH)
-        width, height = image.size
-        response = {"dimensions": [width, height]}
+        
+        # Store original dimensions
+        original_width, original_height = image.size
+        
+        # Send original dimensions in response
+        response = {"dimensions": [original_width, original_height]}
         
         # Convert image to base64 for sending in response
         buffered = io.BytesIO()
-        image.save(buffered, format="JPEG")
+        image.save(buffered, format="JPEG", quality=85)  # Reduced quality for better performance
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
         response["image"] = img_str
         
