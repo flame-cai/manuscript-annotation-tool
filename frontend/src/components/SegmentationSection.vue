@@ -32,7 +32,7 @@ function selectPoint(event) {
   points.value[point]['segment'] = segment
 }
 
-function mouseUpCanvas() {
+function keyUpCanvas() {
   isSelectMode.value = false
   if (currentSegment.value === segments.value.length - 1) {
     segments.value.push({
@@ -44,16 +44,13 @@ function mouseUpCanvas() {
   }
 }
 
-function offSelectMode() {
-  isSelectMode.value = false
-}
 
 fetch(
   import.meta.env.VITE_BACKEND_URL +
-    `/segment/${Object.keys(annotationStore.recognitions)[0]}/${annotationStore.currentPage}`,
+  `/segment/${Object.keys(annotationStore.recognitions)[0]}/${annotationStore.currentPage}`,
 )
-  .then((response) => response.json())
-  .then((object) => {
+.then((response) => response.json())
+.then((object) => {
     updateCanvasSize(object['dimensions'][0], object['dimensions'][1])
     object['points'].forEach((point) => {
       points.value.push({
@@ -63,7 +60,7 @@ fetch(
     })
   })
 
-function createSegments() {
+  function createSegments() {
   for (const point of points.value) {
     if (point.segment === null) {
       alert("Some points haven't been assigned a segment")
@@ -73,7 +70,7 @@ function createSegments() {
   const request = points.value.map((point) => point.segment)
   fetch(
     import.meta.env.VITE_BACKEND_URL +
-      `/segment/${Object.keys(annotationStore.recognitions)[0]}/${annotationStore.currentPage}`,
+    `/segment/${Object.keys(annotationStore.recognitions)[0]}/${annotationStore.currentPage}`,
     {
       method: 'POST',
       headers: {
@@ -86,10 +83,30 @@ function createSegments() {
   })
 }
 
-document.addEventListener('mouseup', offSelectMode)
+function onSelectMode(e) {
+  if (e.key === 'd')
+  isSelectMode.value = true;
+}
+
+function offSelectMode(e) {
+  if (e.key === 'd')
+  {isSelectMode.value = false
+  if (currentSegment.value === segments.value.length - 1) {
+    segments.value.push({
+      segment: 'segment ' + (segments.value.length + 1),
+      color: getRandomHexColor(),
+      points: [],
+    })
+    currentSegment.value += 1
+  }}
+}
+
+document.addEventListener('keydown', onSelectMode)
+document.addEventListener('keyup', offSelectMode)
 window.addEventListener('blur', offSelectMode)
 
 onUnmounted(() => {
+  document.removeEventListener('keyup', onSelectMode)
   document.removeEventListener('mouseup', offSelectMode)
   window.removeEventListener('blur', offSelectMode)
 })
@@ -123,8 +140,8 @@ onUnmounted(() => {
     <div
       class="segmentation-canvas"
       ref="segmentationCanvas"
-      @mousedown.left="isSelectMode = true"
-      @mouseup.left="mouseUpCanvas"
+      @keydown.d="isSelectMode = true"
+      @keyup.d="keyUpCanvas"
     >
       <SegmentationPoint
         v-for="(point, index) in points"

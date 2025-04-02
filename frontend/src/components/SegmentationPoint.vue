@@ -31,4 +31,14 @@ onMounted(() => {
   height: 10px;
   border-radius: 50%;
 }
+
+.point::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: -5px;
+  right: -5px;
+  background: transparent;
+}
 </style>
