@@ -2,7 +2,7 @@
 import { reactive, ref, watch, onMounted } from 'vue'
 import Sanscript from '@indic-transliteration/sanscript'
 import { useAnnotationStore } from '@/stores/annotationStore'
-import { handleBackspace } from './devanagariInputUtils'  // Import the new utility function
+import { handleBackspace } from './typing-utils/devanagariInputUtils'  // Import the new utility function
 
 const BASE_PATH = `${import.meta.env.VITE_BACKEND_URL}/line-images`
 

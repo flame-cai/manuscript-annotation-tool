@@ -33,6 +33,13 @@ import base64
 
 
 
+import numpy as np
+import torch
+from torch_geometric.data import Data
+import json
+import os
+
+
 bp = Blueprint("main", __name__)
 
 
@@ -162,25 +169,56 @@ def make_segments(manuscript_name, page):
 
 
 
-#this gets run, after the points are labelled..(manually or semi-automatically)
 @bp.route("/semi-segment/<string:manuscript_name>/<string:page>", methods=["POST"])
 def make_semi_segments(manuscript_name, page):
-    MANUSCRIPTS_PATH = os.path.join(current_app.config['DATA_PATH'], 'manuscripts')
-    segments = request.get_json()
-    labels_file = os.path.join(
-        MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_labels.txt"
-    )
+    try:
+        MANUSCRIPTS_PATH = os.path.join(current_app.config['DATA_PATH'], 'manuscripts')
+        POINTS_FILEPATH = os.path.join(
+            MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_labels.txt"
+        )
+        GRAPH_FILEPATH = os.path.join(
+            MANUSCRIPTS_PATH, manuscript_name, "points-2D"
+        )
+        
+        # Parse request data
+        request_data = request.json
+        print("saving updated graph..")
+        # Extract graph data if available
+        if 'graph' in request_data:
+            graph_data = request_data['graph']
+            
+            # Save graph for GNN processing
+            save_graph_for_gnn(graph_data, manuscript_name, page, output_dir=GRAPH_FILEPATH, update=True)
+            
+            # Also save the modifications log if present
+            if 'modifications' in request_data:
+                modifications_path = os.path.join(GRAPH_FILEPATH, f"{manuscript_name}_page{page}_modifications.json")
+                with open(modifications_path, 'w') as f:
+                    json.dump(request_data['modifications'], f, indent=2)
+        
+        # Process point segments if available
+        if isinstance(request_data, list) or 'points' in request_data:
+            segments_data = request_data if isinstance(request_data, list) else request_data['points']
+            segments_path = os.path.join(GRAPH_FILEPATH, f"{manuscript_name}_page{page}_segments.json")
+            with open(segments_path, 'w') as f:
+                json.dump(segments_data, f, indent=2)
 
-    print(f"just in semi segmentation {labels_file}")
+        # segments = request.get_json()
+        # labels_file = os.path.join(
+        #     MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_labels.txt"
+        # )
+        #     print(f"just in semi segmentation {labels_file}")
+        # implement this later..
+        # okay so the segments are now being labelled manually, instead we now need to do em semi-manually!!
+        # with open(labels_file, "w") as f:
+        #     f.write("\n".join(map(str, segments)))
 
-    # okay so the segments are now being labelled manually, instead we now need to do em semi-manually!!
-    # with open(labels_file, "w") as f:
-    #     f.write("\n".join(map(str, segments)))
+        #run_manual_segmentation(manuscript_name, page)
+        
+        return {"message": f"Graph and segmentation data saved for {manuscript_name} page {page}"}, 200
 
-    #run_manual_segmentation(manuscript_name, page)
-
-    return {"message": f"semi segmentation testing for {page}"}, 200
-
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 
 @bp.route("/semi-segment/<manuscript_name>/<page>", methods=["GET"])
@@ -191,23 +229,29 @@ def get_points_and_graph(manuscript_name, page):
         IMAGE_FILEPATH = os.path.join(
             MANUSCRIPTS_PATH, manuscript_name, "leaves", f"{page}.jpg"
         )
-        image = Image.open(IMAGE_FILEPATH)
+        # image = Image.open(IMAGE_FILEPATH)
+        image = plt.imread(IMAGE_FILEPATH)  # Replace with your image path
+        image = cv2.resize(image, (image.shape[1] // 2, image.shape[0] // 2))
         
         # Store original dimensions
-        original_width, original_height = image.size
-        
+        height, width = image.shape[:2]
+        _image = Image.fromarray((image * 255).astype(np.uint8)) if image.dtype == np.float32 else Image.fromarray(image)
         # Send original dimensions in response
-        response = {"dimensions": [original_width, original_height]}
+        response = {"dimensions": [width, height]}
         
         # Convert image to base64 for sending in response
         buffered = io.BytesIO()
-        image.save(buffered, format="JPEG", quality=85)  # Reduced quality for better performance
+        _image.save(buffered, format="JPEG", quality=85)  # Reduced quality for better performance
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
         response["image"] = img_str
         
         POINTS_FILEPATH = os.path.join(
             MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_points.txt"
         )
+        GRAPH_FILEPATH = os.path.join(
+            MANUSCRIPTS_PATH, manuscript_name, "points-2D"
+        )
+
         if not os.path.exists(POINTS_FILEPATH):
             return {"error": "Page not found"}, 404
             
@@ -220,6 +264,8 @@ def get_points_and_graph(manuscript_name, page):
         
         # Apply the layout analysis logic to generate the graph
         graph_data = generate_layout_graph(points)
+        save_graph_for_gnn(graph_data, manuscript_name, page, output_dir=GRAPH_FILEPATH)
+
         response["points"] = points
         response["graph"] = graph_data
         
@@ -318,7 +364,7 @@ def generate_layout_graph(points):
             ])
     
     # Cluster the edges based on their properties
-    edge_labels = cluster_edges(np.array(edge_properties))
+    edge_labels = cluster_with_single_majority(np.array(edge_properties))
     
     # Prepare the final graph structure
     graph_data = {
@@ -335,26 +381,33 @@ def generate_layout_graph(points):
             "source": int(edge[0]),
             "target": int(edge[1]),
             "label": edge_label
-        })
-    
+        })    
     return graph_data
 
 
-def cluster_edges(features):
+def cluster_with_single_majority(to_cluster, eps=10, min_samples=2):
     """
-    Cluster edges based on their features using DBSCAN algorithm.
-    Returns labels where 0 is the majority cluster and -1 are outliers.
+    Clusters data, identifying only one majority cluster and marking all other points as outliers.
+
+    Args:
+        to_cluster: List of data points to cluster.
+        eps: The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+        min_samples: The number of samples in a neighborhood for a point to be considered as a core point.
+
+    Returns:
+        NumPy array of labels, where the majority cluster is labeled 0, and all other points are labeled -1.
     """
-    if len(features) == 0:
-        return np.array([])
-    
-    # Apply DBSCAN clustering
-    dbscan = DBSCAN(eps=3, min_samples=2)
-    labels = dbscan.fit_predict(features)
-    
-    # Count occurrences of each label
+    to_cluster_array = np.array(to_cluster)
+
+    if len(to_cluster_array) == 0:
+      return np.array([])
+
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+    labels = dbscan.fit_predict(to_cluster_array)
+
+    # Count the occurrences of each label
     label_counts = Counter(labels)
-    
+
     # Find the majority cluster label (excluding -1 outliers)
     majority_label = None
     max_count = 0
@@ -362,11 +415,100 @@ def cluster_edges(features):
         if label != -1 and count > max_count:
             majority_label = label
             max_count = count
-    
-    # Create new labels where majority cluster is 0 and outliers are -1
+
+    # Create a new label array where the majority cluster is 0 and all others are -1
     new_labels = np.full(len(labels), -1)  # Initialize all as outliers
-    
+
     if majority_label is not None:
-        new_labels[labels == majority_label] = 0  # Assign 0 to majority cluster
-    
+        new_labels[labels == majority_label] = 0  # Assign 0 to the majority cluster
+
     return new_labels
+
+
+
+def save_graph_for_gnn(graph_data, manuscript_name, page_number, output_dir='gnn_graphs',update=False):
+    """
+    Save a graph in a format compatible with Graph Neural Networks (PyTorch Geometric).
+    
+    Args:
+        graph_data (dict): The graph data containing nodes and edges
+        manuscript_name (str): Name of the manuscript
+        page_number (int or str): Page number
+        output_dir (str): Directory to save the graph data
+    
+    Returns:
+        str: Path to the saved file
+    """
+    # Ensure output directory exists
+    # os.makedirs(output_dir, exist_ok=True)
+    
+    # Extract node features (x and y coordinates)
+    node_features = np.array([[node['x'], node['y']] for node in graph_data['nodes']], dtype=np.float32)
+    
+    # Extract edge indices in COO format
+    edge_index = []
+    edge_attr = []
+    
+    for edge in graph_data['edges']:
+        source = edge['source']
+        target = edge['target']
+        label = edge['label']
+        
+        # Add edge in both directions for undirected graphs
+        # (for directed graphs, remove the second append)
+        edge_index.append([source, target])
+        edge_attr.append([label])
+    
+    # Convert to numpy arrays
+    edge_index = np.array(edge_index, dtype=np.int64).T  # Transpose to get 2 x num_edges
+    edge_attr = np.array(edge_attr, dtype=np.float32)
+    
+    # Create PyTorch tensors
+    x = torch.tensor(node_features, dtype=torch.float)
+    edge_index = torch.tensor(edge_index, dtype=torch.long)
+    edge_attr = torch.tensor(edge_attr, dtype=torch.float)
+    
+    # Create PyTorch Geometric Data object
+    data = Data(
+        x=x,
+        edge_index=edge_index,
+        edge_attr=edge_attr,
+        num_nodes=len(graph_data['nodes'])
+    )
+    
+    # Add metadata
+    data.manuscript = manuscript_name
+    data.page = page_number
+    
+    # Save PyTorch Geometric data
+    if not update:
+        torch_path = os.path.join(output_dir, f"{manuscript_name}_page{page_number}_graph.pt")
+    else:
+        torch_path = os.path.join(output_dir, f"{manuscript_name}_page{page_number}_graph_updated.pt")
+    torch.save(data, torch_path)
+    
+    # Also save as JSON for compatibility with other frameworks
+    json_data = {
+        "nodes": [{"id": i, "features": [float(f) for f in feat]} for i, feat in enumerate(node_features)],
+        "edges": [{"source": int(edge_index[0, i]), 
+                  "target": int(edge_index[1, i]), 
+                  "features": [float(f) for f in edge_attr[i]]} 
+                  for i in range(edge_index.shape[1])],
+        "metadata": {
+            "manuscript": manuscript_name,
+            "page": page_number
+        }
+    }
+    
+    json_path = os.path.join(output_dir, f"{manuscript_name}_page{page_number}_graph.json")
+    with open(json_path, 'w') as f:
+        json.dump(json_data, f, indent=2)
+    
+    return torch_path
+
+# Example usage in a Flask/FastAPI endpoint:
+# @app.route('/save-gnn-graph/<manuscript_name>/<page_number>', methods=['POST'])
+# def save_gnn_graph_endpoint(manuscript_name, page_number):
+#     graph_data = request.json
+#     file_path = save_graph_for_gnn(graph_data, manuscript_name, page_number)
+#     return jsonify({'success': True, 'file_path': file_path})

@@ -14,7 +14,30 @@
             <input type="checkbox" v-model="showGraph" />
             Show Graph
           </label>
+          <label>
+            <input type="checkbox" v-model="editMode" />
+            Edit Mode
+          </label>
         </div>
+      </div>
+    </div>
+
+    <div v-if="editMode" class="edit-controls">
+      <div class="edit-instructions">
+        <p v-if="selectedNodes.length === 0">Select first node to create/delete edge</p>
+        <p v-else-if="selectedNodes.length === 1">Select second node to create/delete edge</p>
+        <p v-else>Click "Add Edge" or "Delete Edge" below</p>
+      </div>
+      <div class="edit-actions">
+        <button @click="resetSelection">Cancel</button>
+        <button 
+          @click="addEdge" 
+          :disabled="selectedNodes.length !== 2 || edgeExists(selectedNodes[0], selectedNodes[1])"
+        >Add Edge</button>
+        <button 
+          @click="deleteEdge" 
+          :disabled="selectedNodes.length !== 2 || !edgeExists(selectedNodes[0], selectedNodes[1])"
+        >Delete Edge</button>
       </div>
     </div>
 
@@ -60,39 +83,69 @@
         
         <!-- Graph overlay -->
         <svg 
-          v-if="showGraph && graph.nodes && graph.edges" 
+          v-if="showGraph && workingGraph.nodes && workingGraph.edges" 
           class="graph-overlay"
           :width="scaledWidth"
           :height="scaledHeight"
+          @click="editMode && onBackgroundClick"
         >
+          <!-- Edges -->
           <line
-            v-for="(edge, index) in graph.edges"
+            v-for="(edge, index) in workingGraph.edges"
             :key="`edge-${index}`"
-            :x1="scaleX(graph.nodes[edge.source].x)"
-            :y1="scaleY(graph.nodes[edge.source].y)"
-            :x2="scaleX(graph.nodes[edge.target].x)"
-            :y2="scaleY(graph.nodes[edge.target].y)"
-            :stroke="edge.label === 0 ? '#3498db' : '#e74c3c'"
-            stroke-width="1.5"
+            :x1="scaleX(workingGraph.nodes[edge.source].x)"
+            :y1="scaleY(workingGraph.nodes[edge.source].y)"
+            :x2="scaleX(workingGraph.nodes[edge.target].x)"
+            :y2="scaleY(workingGraph.nodes[edge.target].y)"
+            :stroke="getEdgeColor(edge)"
+            :stroke-width="isEdgeSelected(edge) ? 3 : 1.5"
             :stroke-opacity="0.7"
+            @click="editMode && onEdgeClick(edge, $event)"
           />
+          
+          <!-- Nodes -->
           <circle
-            v-for="(node, index) in graph.nodes"
+            v-for="(node, index) in workingGraph.nodes"
             :key="`node-${index}`"
             :cx="scaleX(node.x)"
             :cy="scaleY(node.y)"
-            r="3"
-            fill="#2ecc71"
+            :r="isNodeSelected(index) ? 6 : 3"
+            :fill="isNodeSelected(index) ? '#ff9500' : '#2ecc71'"
             :fill-opacity="0.8"
+            @click="editMode && onNodeClick(index, $event)"
+          />
+          
+          <!-- Selection line (when one node is selected) -->
+          <line
+            v-if="editMode && selectedNodes.length === 1 && tempEndPoint"
+            :x1="scaleX(workingGraph.nodes[selectedNodes[0]].x)"
+            :y1="scaleY(workingGraph.nodes[selectedNodes[0]].y)"
+            :x2="tempEndPoint.x"
+            :y2="tempEndPoint.y"
+            stroke="#ff9500"
+            stroke-width="1.5"
+            stroke-dasharray="5,5"
+            stroke-opacity="0.7"
           />
         </svg>
       </div>
     </div>
+    <div v-if="modifications.length > 0" class="modifications-log">
+        <h3>Modifications ({{ modifications.length }})</h3>
+        <button @click="saveModifications">Save Changes</button>
+        <button @click="resetModifications">Reset All</button>
+        <ul>
+          <li v-for="(mod, index) in modifications" :key="index" class="modification-item">
+            {{ mod.type === 'add' ? 'Added' : 'Removed' }} edge between Node {{ mod.source }} and Node {{ mod.target }}
+            <button @click="undoModification(index)" class="undo-button">Undo</button>
+          </li>
+        </ul>
+      </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch, reactive } from 'vue';
 import { useAnnotationStore } from '@/stores/annotationStore';
 
 const annotationStore = useAnnotationStore();
@@ -109,6 +162,13 @@ const imageData = ref('');
 const imageLoaded = ref(false);
 const showPoints = ref(true);
 const showGraph = ref(true);
+
+// Editing state
+const editMode = ref(false);
+const selectedNodes = ref([]);
+const tempEndPoint = ref(null);
+const modifications = ref([]);
+const workingGraph = reactive({ nodes: [], edges: [] });
 
 // Scale factor (similar to the Python code's resize)
 const scaleFactor = 0.5; // This is equivalent to dividing by 2 as in your Python code
@@ -164,6 +224,8 @@ const fetchPageData = async () => {
     // Process graph
     if (data.graph) {
       graph.value = data.graph;
+      // Clone to working graph
+      resetWorkingGraph();
     }
     
     // Process image
@@ -181,28 +243,281 @@ const fetchPageData = async () => {
   }
 };
 
+const resetWorkingGraph = () => {
+  // Deep clone the original graph to working graph
+  workingGraph.nodes = JSON.parse(JSON.stringify(graph.value.nodes || []));
+  workingGraph.edges = JSON.parse(JSON.stringify(graph.value.edges || []));
+  resetSelection();
+  modifications.value = [];
+};
+
+const resetSelection = () => {
+  selectedNodes.value = [];
+  tempEndPoint.value = null;
+};
+
+const onNodeClick = (nodeIndex, event) => {
+  event.stopPropagation();
+  
+  // If node is already selected, deselect it
+  const existingIndex = selectedNodes.value.indexOf(nodeIndex);
+  if (existingIndex !== -1) {
+    selectedNodes.value.splice(existingIndex, 1);
+    return;
+  }
+  
+  // Add to selection (but limit to 2 nodes)
+  if (selectedNodes.value.length < 2) {
+    selectedNodes.value.push(nodeIndex);
+  } else {
+    // Replace selection if already have 2 nodes
+    selectedNodes.value = [nodeIndex];
+  }
+  
+  tempEndPoint.value = null;
+};
+
+const onEdgeClick = (edge, event) => {
+  event.stopPropagation();
+  
+  // Select the nodes that form this edge
+  selectedNodes.value = [edge.source, edge.target];
+};
+
+const onBackgroundClick = () => {
+  resetSelection();
+};
+
+const edgeExists = (nodeA, nodeB) => {
+  return workingGraph.edges.some(e => 
+    (e.source === nodeA && e.target === nodeB) || 
+    (e.source === nodeB && e.target === nodeA)
+  );
+};
+
+const addEdge = () => {
+  if (selectedNodes.value.length !== 2) return;
+  
+  const [source, target] = selectedNodes.value;
+  
+  // Check if edge already exists
+  if (edgeExists(source, target)) {
+    console.log('Edge already exists');
+    return;
+  }
+  
+  // Add edge to working graph
+  workingGraph.edges.push({
+    source,
+    target,
+    label: 0, // Default label for same-line connection
+    modified: true
+  });
+  
+  // Track modification
+  modifications.value.push({
+    type: 'add',
+    source,
+    target,
+    label: 0
+  });
+  
+  resetSelection();
+};
+
+const deleteEdge = () => {
+  if (selectedNodes.value.length !== 2) return;
+  
+  const [source, target] = selectedNodes.value;
+  
+  // Find the edge index
+  const edgeIndex = workingGraph.edges.findIndex(e => 
+    (e.source === source && e.target === target) ||
+    (e.source === target && e.target === source)
+  );
+  
+  if (edgeIndex === -1) {
+    console.log('Edge not found');
+    return;
+  }
+  
+  // Track modification before removing
+  const removedEdge = workingGraph.edges[edgeIndex];
+  modifications.value.push({
+    type: 'delete',
+    source: removedEdge.source,
+    target: removedEdge.target,
+    label: removedEdge.label
+  });
+  
+  // Remove edge
+  workingGraph.edges.splice(edgeIndex, 1);
+  
+  resetSelection();
+};
+
+const undoModification = (index) => {
+  const mod = modifications.value[index];
+  
+  if (mod.type === 'add') {
+    // Find and remove the added edge
+    const edgeIndex = workingGraph.edges.findIndex(e => 
+      (e.source === mod.source && e.target === mod.target) ||
+      (e.source === mod.target && e.target === mod.source)
+    );
+    
+    if (edgeIndex !== -1) {
+      workingGraph.edges.splice(edgeIndex, 1);
+    }
+  } else if (mod.type === 'delete') {
+    // Re-add the deleted edge
+    workingGraph.edges.push({
+      source: mod.source,
+      target: mod.target,
+      label: mod.label
+    });
+  }
+  
+  // Remove this modification from the list
+  modifications.value.splice(index, 1);
+};
+
+const resetModifications = () => {
+  resetWorkingGraph();
+};
+
+// #TODO add code to save the updated graph
+const isNodeSelected = (nodeIndex) => {
+  return selectedNodes.value.includes(nodeIndex);
+};
+
+const isEdgeSelected = (edge) => {
+  return selectedNodes.value.length === 2 &&
+    ((selectedNodes.value[0] === edge.source && selectedNodes.value[1] === edge.target) ||
+     (selectedNodes.value[0] === edge.target && selectedNodes.value[1] === edge.source));
+};
+
+const getEdgeColor = (edge) => {
+  // Modified edges get a different color
+  if (edge.modified) return '#ff9500';
+  // Original edge coloring logic
+  return edge.label === 0 ? '#3498db' : '#e74c3c';
+};
+
 const nextPage = () => {
+  // Check for unsaved changes
+  if (modifications.value.length > 0) {
+    if (confirm('You have unsaved changes. Do you want to save them before moving to the next page?')) {
+      saveModifications();
+    }
+  }
   annotationStore.setCurrentPage(String(Number(currentPage.value) + 1));
 };
 
 const previousPage = () => {
+  // Check for unsaved changes
+  if (modifications.value.length > 0) {
+    if (confirm('You have unsaved changes. Do you want to save them before moving to the previous page?')) {
+      saveModifications();
+    }
+  }
   if (Number(currentPage.value) > 1) {
     annotationStore.setCurrentPage(String(Number(currentPage.value) - 1));
   }
+};
+
+// Add mouse move handler for visualization when selecting nodes
+const handleMouseMove = (event) => {
+  if (!editMode.value || selectedNodes.value.length !== 1) return;
+  
+  const rect = container.value.getBoundingClientRect();
+  tempEndPoint.value = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
 };
 
 // Watch for page changes
 watch(
   () => annotationStore.currentPage,
   () => {
+    // Check for unsaved changes
+    if (modifications.value.length > 0) {
+      if (confirm('You have unsaved changes. Do you want to save them before changing pages?')) {
+        saveModifications();
+      } else {
+        modifications.value = [];
+      }
+    }
     fetchPageData();
   }
 );
+
+// Watch for edit mode toggle
+watch(editMode, (newValue) => {
+  if (newValue) {
+    // Add mouse move listener when entering edit mode
+    document.addEventListener('mousemove', handleMouseMove);
+  } else {
+    // Remove listener when leaving edit mode
+    document.removeEventListener('mousemove', handleMouseMove);
+    resetSelection();
+  }
+});
 
 // Initial data fetch
 onMounted(() => {
   fetchPageData();
 });
+
+// Clean up
+onUnmounted(() => {
+  document.removeEventListener('mousemove', handleMouseMove);
+});
+
+const saveModifications = async () => {
+  try {
+    console.log('Saving modifications:', modifications.value);
+    
+    // Prepare the request with the modified graph data
+    const request = {
+      graph: workingGraph,
+      modifications: modifications.value,
+      points: points.value.map(point => point.segment)
+    };
+    
+    const response = await fetch(
+      import.meta.env.VITE_BACKEND_URL + 
+      `/semi-segment/${manuscriptName.value}/${currentPage.value}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to save modifications');
+    }
+    
+    // Update the original graph with the working graph
+    graph.value = JSON.parse(JSON.stringify(workingGraph));
+    modifications.value = [];
+    
+    // Navigate to uploaded manuscripts page if needed
+    // router.push({ name: 'uploaded-manuscripts' })
+    
+    console.log('Graph modifications saved successfully');
+  } catch (err) {
+    console.error('Error saving modifications:', err);
+    error.value = err.message || 'Failed to save modifications';
+  }
+};
+
+
+
 </script>
 
 <style scoped>
@@ -210,56 +525,51 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  width: 100%;
 }
 
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1rem;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
 }
 
 .controls {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 12px;
 }
 
 .toggle-container {
   display: flex;
-  gap: 1rem;
+  gap: 8px;
 }
 
 .visualization-container {
-  flex: 1;
-  overflow: auto;
   position: relative;
-  padding: 1rem;
+  overflow: auto;
+  flex: 1;
   background-color: #eee;
 }
 
 .image-container {
   position: relative;
   margin: 0 auto;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .manuscript-image {
   display: block;
-  object-fit: contain;
-  opacity: 0.2;
 }
 
 .placeholder-image {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f0f0f0;
+  background-color: #ddd;
   color: #666;
-  font-size: 1.2rem;
 }
 
 .points-overlay {
@@ -273,54 +583,94 @@ onMounted(() => {
 
 .point {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  margin-left: -3px;
-  margin-top: -3px;
-  background-color: rgba(255, 0, 0, 0.7);
+  width: 4px;
+  height: 4px;
+  background-color: rgba(255, 0, 0, 0.5);
   border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .graph-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
 }
 
 .loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 2rem;
-  font-size: 1.2rem;
-  color: #6c757d;
+  padding: 20px;
+  text-align: center;
+  font-style: italic;
+  color: #666;
 }
 
 .error-message {
-  margin: 1rem;
-  padding: 1rem;
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-  border-radius: 0.25rem;
+  padding: 20px;
+  background-color: #fee;
+  color: #c00;
+  border: 1px solid #faa;
+  margin: 10px;
+  border-radius: 4px;
+}
+
+/* Edit mode styling */
+.edit-controls {
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #ddd;
+}
+
+.edit-instructions {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #555;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
 }
 
 button {
-  padding: 0.375rem 0.75rem;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 0.25rem;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: #fff;
   cursor: pointer;
 }
 
 button:hover {
-  background-color: #0069d9;
+  background-color: #f0f0f0;
 }
 
 button:disabled {
-  background-color: #6c757d;
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.modifications-log {
+  border-top: 1px solid #ddd;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.modifications-log h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.modification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.undo-button {
+  font-size: 12px;
+  padding: 2px 6px;
 }
 </style>
