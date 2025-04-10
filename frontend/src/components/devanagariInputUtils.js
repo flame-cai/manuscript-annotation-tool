@@ -1,14 +1,7 @@
 // devanagariInputUtils.js
-export function logCharactersBeforeCursor(input) {
-  const cursorPosition = input.selectionStart;
-  const currentValue = input.value;
-  console.log({
-    '-3': currentValue[cursorPosition - 3],
-    '-2': currentValue[cursorPosition - 2],
-    '-1': currentValue[cursorPosition - 1]
-  });
-    return
-}
+import { singleConsonantMap, handleSingleConsonant, logCharactersBeforeCursor } from './InputClusterCode'  // Import the new utility function
+
+
 
 export function handleBackspace(event, devanagariRef) {
     const input = event.target
@@ -110,6 +103,7 @@ export function handleBackspace(event, devanagariRef) {
       }
     }
 
+
     else if (event.key === 'h') {
       if (characterRelativeMinus1 === zwnj && 
         characterRelativeMinus2 === halantCharacter && 
@@ -165,4 +159,48 @@ export function handleBackspace(event, devanagariRef) {
         return
       }
     }
+    
+
+    // Inside your event handler:
+    else if (singleConsonantMap[event.key]) {
+      logCharactersBeforeCursor(input);
+      handleSingleConsonant(event, devanagariRef, event.key, singleConsonantMap[event.key]);
+      return;
+    }
+
+    // else if (event.key === 'k') {
+    //   if (characterRelativeMinus1 === zwnj) {
+    //     event.preventDefault()
+  
+    //     const newValue = 
+    //       currentValue.slice(0, cursorPosition - 1) + 
+    //       'क' + '्' + '\u200C' +
+    //       currentValue.slice(cursorPosition)
+    //     console.log('Removed ZWNJ and Inserted ह + halant + zwnj')
+    //     // Update the ref value
+    //     devanagariRef.value = newValue
+  
+    //     input.value = newValue
+    //     input.setSelectionRange(cursorPosition+2, cursorPosition+2)
+    //     logCharactersBeforeCursor(input);
+    //     return
+    //   }
+
+    //   else  {
+    //     event.preventDefault()
+  
+    //     const newValue = 
+    //       currentValue.slice(0, cursorPosition) + 
+    //       'क' + '्' + '\u200C' +
+    //       currentValue.slice(cursorPosition)
+    //     console.log('Inserted ह')
+    //     // Update the ref value
+    //     devanagariRef.value = newValue
+  
+    //     input.value = newValue
+    //     input.setSelectionRange(cursorPosition+3, cursorPosition+3)
+    //     logCharactersBeforeCursor(input);
+    //     return
+    //   }
+    // }
   }
