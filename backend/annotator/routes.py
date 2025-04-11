@@ -357,7 +357,7 @@ def generate_layout_graph(points):
             # Store edge properties for clustering
             edge_properties.append([
                 total_length,
-                np.abs(theta_a + theta_b),
+                #np.abs(theta_a + theta_b),
                 aspect_ratio,
                 vert_consistency,
                 avg_y_diff

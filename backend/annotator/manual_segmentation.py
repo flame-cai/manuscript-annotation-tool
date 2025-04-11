@@ -50,7 +50,7 @@ def load_images_from_folder(folder_path):
 
     for file in files:
         # Check if the file is an image (PNG or JPG)
-        if file.lower().endswith((".png", ".jpg", ".jpeg")):
+        if file.lower().endswith((".png", ".jpg", ".jpeg", ".tif")):
             try:
                 # Construct the full file path
                 file_path = os.path.join(folder_path, file)
