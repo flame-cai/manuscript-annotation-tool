@@ -226,16 +226,37 @@ def get_points_and_graph(manuscript_name, page):
     MANUSCRIPTS_PATH = os.path.join(current_app.config['DATA_PATH'], 'manuscripts')
     try:
         print("Getting points and generating graph")
-        IMAGE_FILEPATH = os.path.join(
-            MANUSCRIPTS_PATH, manuscript_name, "leaves", f"{page}.jpg"
-        )
-        # image = Image.open(IMAGE_FILEPATH)
-        image = plt.imread(IMAGE_FILEPATH)  # Replace with your image path
-        image = cv2.resize(image, (image.shape[1] // 2, image.shape[0] // 2))
+        # IMAGE_FILEPATH = os.path.join(
+        #     MANUSCRIPTS_PATH, manuscript_name, "leaves", f"{page}.jpg"
+        # )
+        # image = plt.imread(IMAGE_FILEPATH)  # Replace with your image path
+        # image = cv2.resize(image, (image.shape[1] // 2, image.shape[0] // 2))
+        # Build potential file paths for jpg and tif files
+        filepath_jpg = os.path.join(MANUSCRIPTS_PATH, manuscript_name, "leaves", f"{page}.jpg")
+        filepath_tif = os.path.join(MANUSCRIPTS_PATH, manuscript_name, "leaves", f"{page}.tif")
+
+        # Check which file exists
+        if os.path.exists(filepath_jpg):
+            IMAGE_FILEPATH = filepath_jpg
+        elif os.path.exists(filepath_tif):
+            IMAGE_FILEPATH = filepath_tif
+        else:
+            raise FileNotFoundError("Neither .jpg nor .tif image file found for the given page.")
+
+        # Read the image using the appropriate method based on the file extension
+        if IMAGE_FILEPATH.lower().endswith('.tif'):
+            # Use Pillow to open TIFF images and convert to a NumPy array
+            image = np.array(Image.open(IMAGE_FILEPATH))
+        else:
+            image = plt.imread(IMAGE_FILEPATH)
         
+        image = cv2.resize(image, (image.shape[1] // 2, image.shape[0] // 2))
         # Store original dimensions
         height, width = image.shape[:2]
         _image = Image.fromarray((image * 255).astype(np.uint8)) if image.dtype == np.float32 else Image.fromarray(image)
+        # Convert to RGB if not already
+        if _image.mode != "RGB":
+            _image = _image.convert("RGB")
         # Send original dimensions in response
         response = {"dimensions": [width, height]}
         
@@ -244,6 +265,7 @@ def get_points_and_graph(manuscript_name, page):
         _image.save(buffered, format="JPEG", quality=85)  # Reduced quality for better performance
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
         response["image"] = img_str
+        
         
         POINTS_FILEPATH = os.path.join(
             MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_points.txt"
@@ -357,7 +379,7 @@ def generate_layout_graph(points):
             # Store edge properties for clustering
             edge_properties.append([
                 total_length,
-                #np.abs(theta_a + theta_b),
+                np.abs(theta_a + theta_b),
                 aspect_ratio,
                 vert_consistency,
                 avg_y_diff
