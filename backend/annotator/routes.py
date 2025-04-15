@@ -386,24 +386,50 @@ def generate_layout_graph(points):
             ])
     
     # Cluster the edges based on their properties
-    edge_labels = cluster_with_single_majority(np.array(edge_properties))
+    # edge_labels = cluster_with_single_majority(np.array(edge_properties))
     
+    # # Prepare the final graph structure
+    # graph_data = {
+    #     "nodes": [{"id": i, "x": float(point[0]), "y": float(point[1])} for i, point in enumerate(points)],
+    #     "edges": []
+    # }
+    
+    # # Add edges with their labels
+    # for i, edge in enumerate(edges):
+    #     # Determine edge label: 0 for correct (majority cluster), -1 for outliers
+    #     edge_label = int(edge_labels[i // 2])  # Divide by 2 because we added each edge pair
+        
+    #     graph_data["edges"].append({
+    #         "source": int(edge[0]),
+    #         "target": int(edge[1]),
+    #         "label": edge_label
+    #     })    
+    # return graph_data
+    edge_labels = cluster_with_single_majority(np.array(edge_properties))
+
+    # Create a mask for edges that are not outliers (label != -1)
+    non_outlier_mask = np.array(edge_labels) != -1
+
     # Prepare the final graph structure
     graph_data = {
         "nodes": [{"id": i, "x": float(point[0]), "y": float(point[1])} for i, point in enumerate(points)],
         "edges": []
     }
-    
-    # Add edges with their labels
+
+    # Add edges with their labels, filtering out outliers
     for i, edge in enumerate(edges):
-        # Determine edge label: 0 for correct (majority cluster), -1 for outliers
-        edge_label = int(edge_labels[i // 2])  # Divide by 2 because we added each edge pair
+        # Determine the corresponding edge label using division by 2 (each edge appears twice)
+        label_index = i // 2
+        edge_label = int(edge_labels[label_index])
         
-        graph_data["edges"].append({
-            "source": int(edge[0]),
-            "target": int(edge[1]),
-            "label": edge_label
-        })    
+        # Only add the edge if it is not an outlier
+        if non_outlier_mask[label_index]:
+            graph_data["edges"].append({
+                "source": int(edge[0]),
+                "target": int(edge[1]),
+                "label": edge_label
+            })
+
     return graph_data
 
 
