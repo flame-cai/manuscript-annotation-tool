@@ -164,6 +164,34 @@ def make_segments(manuscript_name, page):
     return {"message": f"succesfully saved labels for page {page}"}, 200
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @bp.route("/semi-segment/<string:manuscript_name>/<string:page>", methods=["POST"])
 def make_semi_segments(manuscript_name, page):
     try:
@@ -178,12 +206,20 @@ def make_semi_segments(manuscript_name, page):
         # Parse request data
         request_data = request.json
         print("saving updated graph..")
+        
         # Extract graph data if available
         if 'graph' in request_data:
             graph_data = request_data['graph']
             
             # Save graph for GNN processing
             save_graph_for_gnn(graph_data, manuscript_name, page, output_dir=GRAPH_FILEPATH, update=True)
+            
+            # Generate labels from connected components in the graph
+            labels = generate_labels_from_graph(graph_data)
+            
+            # Save the labels to the appropriate file
+            with open(POINTS_FILEPATH, "w") as f:
+                f.write("\n".join(map(str, labels)))
             
             # Also save the modifications log if present
             if 'modifications' in request_data:
@@ -197,23 +233,65 @@ def make_semi_segments(manuscript_name, page):
             segments_path = os.path.join(GRAPH_FILEPATH, f"{manuscript_name}_page{page}_segments.json")
             with open(segments_path, 'w') as f:
                 json.dump(segments_data, f, indent=2)
-        # TODO modify this code such that it save in the same format
-        # segments = request.get_json()
-        # labels_file = os.path.join(
-        #     MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_labels.txt"
-        # )
-        #     print(f"just in semi segmentation {labels_file}")
-        # implement this later..
-        # okay so the segments are now being labelled manually, instead we now need to do em semi-manually!!
-        # with open(labels_file, "w") as f:
-        #     f.write("\n".join(map(str, segments)))
 
-        #run_manual_segmentation(manuscript_name, page)
+        # Run manual segmentation after saving labels
+        run_manual_segmentation(manuscript_name, page)
         
         return {"message": f"Graph and segmentation data saved for {manuscript_name} page {page}"}, 200
 
     except Exception as e:
         return {"error": str(e)}, 500
+
+def generate_labels_from_graph(graph_data):
+    """
+    Generate labels for points based on connected components in the graph.
+    Sort components from top to bottom and assign sequential labels.
+    
+    Args:
+        graph_data (dict): Graph data containing nodes and edges
+        
+    Returns:
+        list: Labels for each node/point
+    """
+    # Extract nodes and edges
+    nodes = graph_data.get('nodes', [])
+    edges = graph_data.get('edges', [])
+    
+    # Create an undirected graph using networkx
+    import networkx as nx
+    G = nx.Graph()
+    
+    # Add all nodes
+    for i, node in enumerate(nodes):
+        G.add_node(node['id'], x=node['x'], y=node['y'])
+    
+    # Add edges
+    for edge in edges:
+        G.add_edge(edge['source'], edge['target'])
+    
+    # Find connected components (each component is a line)
+    components = list(nx.connected_components(G))
+    
+    # Calculate the average y-coordinate for each component
+    component_y_avg = []
+    for i, component in enumerate(components):
+        y_coords = [nodes[n]['y'] for n in component if n < len(nodes)]
+        avg_y = sum(y_coords) / len(y_coords) if y_coords else 0
+        component_y_avg.append((i, avg_y, component))
+    
+    # Sort components by average y-coordinate (top to bottom)
+    component_y_avg.sort(key=lambda x: x[1])
+    
+    # Create labels array (initialized with -1)
+    labels = [-1] * len(nodes)
+    
+    # Assign labels to each node based on its component
+    for label, (_, _, component) in enumerate(component_y_avg):
+        for node_id in component:
+            if node_id < len(labels):
+                labels[node_id] = label
+    
+    return labels
 
 
 @bp.route("/semi-segment/<manuscript_name>/<page>", methods=["GET"])

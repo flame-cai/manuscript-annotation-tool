@@ -477,7 +477,7 @@ onUnmounted(() => {
 
 const saveModifications = async () => {
   try {
-    console.log('Saving modifications:', modifications.value);
+    console.log('Saving modifications and generating line labels...');
     
     // Prepare the request with the modified graph data
     const request = {
@@ -499,17 +499,14 @@ const saveModifications = async () => {
     );
     
     if (!response.ok) {
-      throw new Error('Failed to save modifications');
+      throw new Error('Failed to save modifications and generate labels');
     }
     
     // Update the original graph with the working graph
     graph.value = JSON.parse(JSON.stringify(workingGraph));
     modifications.value = [];
     
-    // Navigate to uploaded manuscripts page if needed
-    // router.push({ name: 'uploaded-manuscripts' })
-    
-    console.log('Graph modifications saved successfully');
+    console.log('Graph modifications saved and labels generated successfully');
   } catch (err) {
     console.error('Error saving modifications:', err);
     error.value = err.message || 'Failed to save modifications';
