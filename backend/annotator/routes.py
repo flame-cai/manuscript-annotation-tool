@@ -164,11 +164,6 @@ def make_segments(manuscript_name, page):
     return {"message": f"succesfully saved labels for page {page}"}, 200
 
 
-
-
-
-
-
 @bp.route("/semi-segment/<string:manuscript_name>/<string:page>", methods=["POST"])
 def make_semi_segments(manuscript_name, page):
     try:
@@ -202,7 +197,7 @@ def make_semi_segments(manuscript_name, page):
             segments_path = os.path.join(GRAPH_FILEPATH, f"{manuscript_name}_page{page}_segments.json")
             with open(segments_path, 'w') as f:
                 json.dump(segments_data, f, indent=2)
-
+        # TODO modify this code such that it save in the same format
         # segments = request.get_json()
         # labels_file = os.path.join(
         #     MANUSCRIPTS_PATH, manuscript_name, "points-2D", f"{page}_labels.txt"
@@ -385,6 +380,7 @@ def generate_layout_graph(points):
                 avg_y_diff
             ])
     
+    # USE THIS IF WE WANT TO KEEP THE OUTLIERS..FOR MAPS
     # Cluster the edges based on their properties
     # edge_labels = cluster_with_single_majority(np.array(edge_properties))
     
