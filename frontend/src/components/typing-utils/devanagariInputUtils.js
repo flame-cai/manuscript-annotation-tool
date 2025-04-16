@@ -3,7 +3,7 @@ import { singleConsonantMap, handleSingleConsonant, logCharactersBeforeCursor } 
 
 
 
-export function handleBackspace(event, devanagariRef) {
+export function handleInput(event, devanagariRef) {
     const input = event.target
 
     // function start (takes in input)
@@ -27,9 +27,6 @@ export function handleBackspace(event, devanagariRef) {
     // Define special characters
     const halantCharacter = '\u094D' // Devanagari Halant
     const zwnj = '\u200C' // Zero-Width Non-Joiner
-
-
-
 
     if (event.key === 'q'){
       event.preventDefault()
@@ -167,40 +164,4 @@ export function handleBackspace(event, devanagariRef) {
       handleSingleConsonant(event, devanagariRef, event.key, singleConsonantMap[event.key]);
       return;
     }
-
-    // else if (event.key === 'k') {
-    //   if (characterRelativeMinus1 === zwnj) {
-    //     event.preventDefault()
-  
-    //     const newValue = 
-    //       currentValue.slice(0, cursorPosition - 1) + 
-    //       'क' + '्' + '\u200C' +
-    //       currentValue.slice(cursorPosition)
-    //     console.log('Removed ZWNJ and Inserted ह + halant + zwnj')
-    //     // Update the ref value
-    //     devanagariRef.value = newValue
-  
-    //     input.value = newValue
-    //     input.setSelectionRange(cursorPosition+2, cursorPosition+2)
-    //     logCharactersBeforeCursor(input);
-    //     return
-    //   }
-
-    //   else  {
-    //     event.preventDefault()
-  
-    //     const newValue = 
-    //       currentValue.slice(0, cursorPosition) + 
-    //       'क' + '्' + '\u200C' +
-    //       currentValue.slice(cursorPosition)
-    //     console.log('Inserted ह')
-    //     // Update the ref value
-    //     devanagariRef.value = newValue
-  
-    //     input.value = newValue
-    //     input.setSelectionRange(cursorPosition+3, cursorPosition+3)
-    //     logCharactersBeforeCursor(input);
-    //     return
-    //   }
-    // }
   }

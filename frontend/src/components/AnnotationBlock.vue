@@ -2,7 +2,7 @@
 import { reactive, ref, watch, onMounted } from 'vue'
 import Sanscript from '@indic-transliteration/sanscript'
 import { useAnnotationStore } from '@/stores/annotationStore'
-import { handleBackspace } from './typing-utils/devanagariInputUtils'  // Import the new utility function
+import { handleInput } from './typing-utils/devanagariInputUtils'  // Import the new utility function
 
 const BASE_PATH = `${import.meta.env.VITE_BACKEND_URL}/line-images`
 
@@ -42,12 +42,12 @@ function save() {
   textboxClassObject['is-valid'] = true
 }
 
-// Bind the imported handleBackspace function with devanagari ref
-const boundHandleBackspace = (event) => handleBackspace(event, devanagari)
+
+const boundHandleInput = (event) => handleInput(event, devanagari)
 
 onMounted(() => {
   if (devanagariInput.value) {
-    devanagariInput.value.addEventListener('keydown', boundHandleBackspace)
+    devanagariInput.value.addEventListener('keydown', boundHandleInput)
   }
 })
 </script>
