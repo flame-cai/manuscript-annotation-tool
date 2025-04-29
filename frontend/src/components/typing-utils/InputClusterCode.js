@@ -3,115 +3,120 @@
 export function logCharactersBeforeCursor(input) {
   const cursorPosition = input.selectionStart;
   const currentValue = input.value;
-  // Log more characters for debugging multi-char sequences
-  console.log({
-    '-5': currentValue[cursorPosition - 5],
-    '-4': currentValue[cursorPosition - 4],
-    '-3': currentValue[cursorPosition - 3],
-    '-2': currentValue[cursorPosition - 2],
-    '-1': currentValue[cursorPosition - 1]
+  console.log("Chars before cursor:", {
+    'Pos': cursorPosition,
+    '-5': currentValue[cursorPosition - 5] || '[Start]',
+    '-4': currentValue[cursorPosition - 4] || '[Start]',
+    '-3': currentValue[cursorPosition - 3] || '[Start]',
+    '-2': currentValue[cursorPosition - 2] || '[Start]',
+    '-1': currentValue[cursorPosition - 1] || '[Start]',
   });
-    return
 }
 
 // --- Character Constants ---
 export const HALANT = '\u094D';
 export const ZWNJ = '\u200C'; // Zero-Width Non-Joiner
 
-// --- Single Character Mappings ---
-// Maps single Roman keys directly to Devanagari base consonants
+// --- Consonant Mappings (Keep Existing) ---
 export const singleConsonantMap = {
-  'k': 'क',
-  'g': 'ग',
-  'c': 'च', // Assuming 'c' maps to 'च' for 'ch'/'chh' combinations
-  'j': 'ज',
-  'T': 'ट',
-  't': 'त',
-  'D': 'ड',
-  'd': 'द',
-  'N': 'ण',
-  'n': 'न',
-  'p': 'प',
-  'b': 'ब',
-  'm': 'म',
-  'y': 'य',
-  'r': 'र',
-  'l': 'ल',
-  'v': 'व',
-  'V': 'ङ', // Typically 'G' or 'N^', but using 'V' as per original comment
-  'S': 'ष',
-  's': 'स',
-  'h': 'ह',
-  'L': 'ळ',
-  'Y': 'ञ', // Typically 'J' or 'n^', but using 'Y' as per original comment
-  // Add others if needed: 'f': 'फ', 'z': 'ज' (or 'ज़' if needed later)
-  // Note: 'q' is handled separately for explicit halant.
-  // Keys like 'h' will primarily trigger multi-char checks first.
+  'k': 'क', 'g': 'ग', 'c': 'च', 'j': 'ज', 'T': 'ट', 't': 'त',
+  'D': 'ड', 'd': 'द', 'N': 'ण', 'n': 'न', 'p': 'प', 'b': 'ब',
+  'm': 'म', 'y': 'य', 'r': 'र', 'l': 'ल', 'v': 'व', 'V': 'ङ',
+  'S': 'ष', 's': 'स', 'h': 'ह', 'L': 'ळ', 'Y': 'ञ',
 };
 
-// --- Double Character Mappings ---
-// Structure: triggerKey: { precedingDevanagariBase: { resultChar: devanagariBase, remove: count } }
-// 'remove: count' indicates how many chars (Base + Halant + ZWNJ) to remove before inserting the new char.
 export const doubleCharMap = {
-  'h': { // Aspirates + sh
-    'क': { resultChar: 'ख', remove: 3 }, // k + h -> kh
-    'ग': { resultChar: 'घ', remove: 3 }, // g + h -> gh
-    'च': { resultChar: 'च', remove: 3 }, // c + h -> ch - WAIT: 'ch' is often 'च'. Let's map 'c' to 'च' and handle 'chh' in triples.
-    // Let's rethink 'ch'. If 'c' is 'च', then 'h' following makes 'छ'.
-    // 'च': { resultChar: 'छ', remove: 3 }, // c + h -> chh (Incorrect based on provided map, ch=च, chh=छ)
-    // Let's assume 'c'='च' is handled by single map. 'h' handles aspiration.
-    'ज': { resultChar: 'झ', remove: 3 }, // j + h -> jh
-    'ट': { resultChar: 'ठ', remove: 3 }, // T + h -> Th
-    'ड': { resultChar: 'ढ', remove: 3 }, // D + h -> Dh
-    'त': { resultChar: 'थ', remove: 3 }, // t + h -> th
-    'द': { resultChar: 'ध', remove: 3 }, // d + h -> dh
-    'प': { resultChar: 'फ', remove: 3 }, // p + h -> ph
-    'ब': { resultChar: 'भ', remove: 3 }, // b + h -> bh
-    'स': { resultChar: 'श', remove: 3 }, // s + h -> sh
-    // Q-prefixed aspiration needs context from 'Q' key, tricky without buffer. Let's ignore Q for now.
-    // 'क़': { resultChar: 'ख़', remove: 3 }, // Qk + h -> Qkh
-    // 'ड़': { resultChar: 'ढ़', remove: 3 }, // QD + h -> QDh
+  'h': {
+    'क': { resultChar: 'ख', remove: 3 }, 'ग': { resultChar: 'घ', remove: 3 },
+    'च': { resultChar: 'छ', remove: 3 }, 'ज': { resultChar: 'झ', remove: 3 },
+    'ट': { resultChar: 'ठ', remove: 3 }, 'ड': { resultChar: 'ढ', remove: 3 },
+    'त': { resultChar: 'थ', remove: 3 }, 'द': { resultChar: 'ध', remove: 3 },
+    'प': { resultChar: 'फ', remove: 3 }, 'ब': { resultChar: 'भ', remove: 3 },
+    'स': { resultChar: 'श', remove: 3 },
   },
-  's': {
-    'क': { resultChar: 'क्ष', remove: 3 }, // k + s -> ks (maps to kS = क्ष)
+  's': { 'क': { resultChar: 'क्ष', remove: 3 } },
+  'S': { 'क': { resultChar: 'क्ष', remove: 3 } },
+  // Add special R/L vowel sign triggers here
+  // Triggered by 'i' or 'I' after 'r' or 'l' consonant context
+  'i': {
+      'र': { resultChar: 'रि', remove: 3, type: 'VOWEL_SIGN_DIRECT' }, // r + i -> रि (Direct replace)
+      'ल': { resultChar: 'लि', remove: 3, type: 'VOWEL_SIGN_DIRECT' }, // l + i -> लि
+      // How to handle Rri -> ऋ? This needs a 3-char context r+r+i
   },
-  'S': { // Assuming capital S for ष, also forms kS = क्ष
-    'क': { resultChar: 'क्ष', remove: 3 }  // k + S -> kS
-  },
-  // Other potential doubles? 'gy' -> 'ज्ञ'? Often 'j' + 'n' + 'y'. Handled in triple.
+  'I': { // Assuming capital I triggers capital vowel signs
+      'र': { resultChar: 'री', remove: 3, type: 'VOWEL_SIGN_DIRECT' }, // r + I -> री
+      'ल': { resultChar: 'ली', remove: 3, type: 'VOWEL_SIGN_DIRECT' }, // l + I -> ली
+       // How to handle RRI -> ॠ? Needs r+r+I context
+  }
+  // Rri/Lli: Let's handle these via the vowel logic checking the *input sequence*
 };
 
-// --- Triple Character Mappings ---
-// Structure: triggerKey: { precedingDevSequence: { resultChar: devanagariBase, remove: count } }
-// 'precedingDevSequence' is the sequence of Devanagari *base* consonants.
-// 'remove: count' is the total chars to remove (Consonants + Halants + ZWNJs).
 export const tripleCharMap = {
-  'h': {
-     // If 'c' maps to 'च', then 'ch' is 'च' + 'h'. What about 'chh'?
-     // Let's assume 'ch' ('च्' + ZWNJ) needs another 'h' to become 'छ'.
-    'च': { resultChar: 'छ', remove: 3 }, // Assuming 'ch' was formed by c+h, now another h makes chh. Check context carefully in handleInput. OR: Maybe 'c'='च', 'h' makes 'छ'. Let's assume 'c'='च', 'h' makes 'छ' from 'च'.
-    // If 'c'='च', 'h' makes 'छ' -> This should be in doubleCharMap['h']['च'] = 'छ'. Let's update doubleCharMap.
-    // 'kS' + 'h' -> kSh (which is also क्ष). Already handled by ks/kS. No change needed.
-    // 's' + 'h' + 'r' -> shr ? Handled by 'sh' then 'r'.
-  },
   'y': {
-    // 'd'+'n'+'y' -> 'dny' -> ज्ञ. Context: द् + ् + ZWNJ + न + ् + ZWNJ. Press 'y'. Check chars -5,-4,-3,-2,-1 = द्, ्, न, ्, ZWNJ.
-    // Careful: ZWNJ might be missing if typing fast or depending on previous logic. Check for base consonants + halants primarily.
-    // Let's simplify context check: Look for Base1 + Halant + Base2 + Halant + ZWNJ
-    'दन': { resultChar: 'ज्ञ', remove: 5 }, // d + n + y -> dny (ज्ञ) - Removes द् + ् + न + ् + ZWNJ
-    'गञ': { resultChar: 'ज्ञ', remove: 5 }, // g + Y + y (?) -> gny (ज्ञ) - Requires 'Y' mapping to 'ञ'. Removes ग् + ् + ञ + ् + ZWNJ
-     // Alternative for gny: 'g' + 'n' + 'y'. Context: ग् + ् + न + ् + ZWNJ
-    'गन': { resultChar: 'ज्ञ', remove: 5 }, // g + n + y -> gny (ज्ञ) - Removes ग् + ् + न + ् + ZWNJ
+    'दन': { resultChar: 'ज्ञ', remove: 5 }, // d + n + y -> dny (ज्ञ)
+    'गञ': { resultChar: 'ज्ञ', remove: 5 }, // g + Y + y -> gny (ज्ञ)
+    'गन': { resultChar: 'ज्ञ', remove: 5 }, // g + n + y -> gny (ज्ञ)
   },
   'r': {
-    'श': { resultChar: 'श्र', remove: 3 }, // sh + r -> shr - Context: श् + ZWNJ. Press 'r'. Replace with श्र् + ZWNJ.
+    'श': { resultChar: 'श्र', remove: 3 }, // sh + r -> shr
   },
-  // Add other triples as needed, e.g., from Q-prefixed list if logic is adapted.
+   // Add Rri/RrI/Lli/LlI?
+   // Trigger 'i', context 'rr', result 'ृ'?
+   // Need to check preceding BASE consonants carefully.
+   // Example Rri: Context needs to be र् + ZWNJ + र् + ZWNJ. Key 'i'. Remove 5, add ृ.
+   // Let's add this logic directly in handleInput for clarity.
 };
 
-// --- Helper Function to Insert Character Sequence ---
-// This function handles inserting the Devanagari Base + Halant + ZWNJ correctly.
+
+// --- Vowel Maps (New) ---
+export const independentVowelMap = {
+    'a': 'अ', 'A': 'अ',
+    'i': 'इ', 'I': 'इ',
+    'u': 'उ', 'U': 'उ',
+    'e': 'ए', 'E': 'ए',
+    'o': 'ओ', 'O': 'ओ',
+    'aa': 'आ', 'AA': 'आ',
+    'ii': 'ई', 'II': 'ई', 'ee': 'ई',
+    'uu': 'ऊ', 'UU': 'ऊ', 'oo': 'ऊ',
+    'ai': 'ऐ', 'AI': 'ऐ', 'EE': 'ऐ',
+    'au': 'औ', 'AU': 'औ', 'ou': 'औ', 'OU': 'औ',
+    'aE': 'ॲ', 'AE': 'ॲ',
+    'aO': 'ऑ', 'AO': 'ऑ',
+    'RRi': 'ऋ', 'RRI': 'ॠ', // Independent forms
+    'LLi': 'ऌ', 'LLI': 'ॡ',
+};
+
+export const dependentVowelMap = {
+    'a': 'ा', 'A': 'ा',
+    'i': 'ि', 'I': 'ि',
+    'u': 'ु', 'U': 'ु',
+    'e': 'े', 'E': 'े',
+    'o': 'ो', 'O': 'ो',
+    'aa': 'ा', 'AA': 'ा',
+    'ii': 'ी', 'II': 'ी', 'ee': 'ी',
+    'uu': 'ू', 'UU': 'ू', 'oo': 'ू',
+    'ai': 'ै', 'AI': 'ै', 'EE': 'ै',
+    'au': 'ौ', 'AU': 'ौ', 'ou': 'ौ', 'OU': 'ौ',
+    'aE': 'ॅ', 'AE': 'ॅ',
+    'aO': 'ॉ', 'AO': 'ॉ',
+    // Dependent R/L vowel signs
+    'Rri': 'ृ', 'RRI': 'ॄ',
+    'Lli': '\u0962', 'LlI': '\u0963',
+};
+
+// Order for checking vowel inputs (longest first)
+export const vowelInputOrder = [
+    'RRI', 'LLI', 'RRi', 'LLi', // 3 chars
+    'aa', 'AA', 'ii', 'II', 'ee', 'uu', 'UU', 'oo', 'ai', 'AI', 'EE', 'au', 'AU', 'ou', 'OU', 'aE', 'AE', 'aO', 'AO', // 2 chars
+    'a', 'A', 'i', 'I', 'u', 'U', 'e', 'E', 'o', 'O' // 1 char
+].filter(key => independentVowelMap[key] !== undefined); // Use keys present in the map
+
+
+// --- Helper Functions (Keep Existing + Additions) ---
+
+// Inserts Base Consonant + Halant + ZWNJ
 export function insertConsonantSequence(input, devanagariRef, baseChar, cursorPosition) {
+    // ... (keep existing implementation)
     const currentValue = input.value;
     const sequence = baseChar + HALANT + ZWNJ;
     const sequenceLength = sequence.length; // Should be 3
@@ -126,14 +131,13 @@ export function insertConsonantSequence(input, devanagariRef, baseChar, cursorPo
     devanagariRef.value = newValue;
     input.value = newValue;
     input.setSelectionRange(newCursorPosition, newCursorPosition);
-    console.log(`Inserted ${baseChar} + Halant + ZWNJ`);
-    logCharactersBeforeCursor(input);
+    console.log(`Inserted Consonant: ${baseChar} + Halant + ZWNJ`);
 }
 
-// --- Helper Function to Replace Character Sequence ---
-// This function replaces a certain number of chars before the cursor with the new sequence.
+// Replaces preceding chars with Base Consonant + Halant + ZWNJ
 export function replaceConsonantSequence(input, devanagariRef, baseChar, cursorPosition, charsToRemove) {
-    const currentValue = input.value;
+    // ... (keep existing implementation)
+      const currentValue = input.value;
     const sequence = baseChar + HALANT + ZWNJ;
     const sequenceLength = sequence.length; // Should be 3
 
@@ -142,61 +146,83 @@ export function replaceConsonantSequence(input, devanagariRef, baseChar, cursorP
       sequence +
       currentValue.slice(cursorPosition);
 
-    // New cursor position: original position - removed chars + inserted chars
     const newCursorPosition = cursorPosition - charsToRemove + sequenceLength;
 
     devanagariRef.value = newValue;
     input.value = newValue;
     input.setSelectionRange(newCursorPosition, newCursorPosition);
-    console.log(`Replaced ${charsToRemove} chars with ${baseChar} + Halant + ZWNJ`);
-    logCharactersBeforeCursor(input);
+    console.log(`Replaced ${charsToRemove} chars with Consonant: ${baseChar} + Halant + ZWNJ`);
 }
 
-
-// --- Original handleSingleConsonant - Modified to use Helpers ---
-// This is now primarily for inserting a consonant when no multi-char sequence is formed.
+// Handles insertion of single consonants (no multi-match)
 export function handleSingleConsonant(event, devanagariRef, devanagariChar) {
-  const input = event.target;
-  const cursorPosition = input.selectionStart;
-  const currentValue = input.value;
-  const characterRelativeMinus1 = currentValue[cursorPosition - 1];
+     // ... (keep existing implementation, but check if ZWNJ removal is always desired)
+     const input = event.target;
+     const cursorPosition = input.selectionStart;
+     const currentValue = input.value;
+     const characterRelativeMinus1 = currentValue[cursorPosition - 1];
 
-  event.preventDefault();
+     event.preventDefault();
 
-  if (characterRelativeMinus1 === ZWNJ) {
-    // If ZWNJ is just before cursor (likely from a previous incomplete sequence or vowel),
-    // remove it before inserting the new consonant sequence.
+     // Original logic removed ZWNJ if present. This might interfere with explicit ZWNJ use.
+     // Let's simplify: Always insert the sequence. If ZWNJ was there, it gets overwritten or pushed.
+     // if (characterRelativeMinus1 === ZWNJ) { ... } else { ... }
+     insertConsonantSequence(input, devanagariRef, devanagariChar, cursorPosition);
+
+     console.log(`State AFTER processing (Single Consonant):`);
+     logCharactersBeforeCursor(input);
+}
+
+// **NEW**: Inserts an Independent Vowel
+export function insertIndependentVowel(input, devanagariRef, vowelChar, cursorPosition) {
+    const currentValue = input.value;
     const newValue =
-      currentValue.slice(0, cursorPosition - 1) +
-      devanagariChar + HALANT + ZWNJ +
-      currentValue.slice(cursorPosition);
-
-    const newCursorPosition = cursorPosition - 1 + 3; // Removed 1, Added 3
+        currentValue.slice(0, cursorPosition) +
+        vowelChar +
+        currentValue.slice(cursorPosition);
+    const newCursorPosition = cursorPosition + vowelChar.length;
 
     devanagariRef.value = newValue;
     input.value = newValue;
     input.setSelectionRange(newCursorPosition, newCursorPosition);
-    console.log(`Removed ZWNJ, Inserted ${devanagariChar} + Halant + ZWNJ`);
-    logCharactersBeforeCursor(input);
-
-  } else {
-    // Standard insertion
-    insertConsonantSequence(input, devanagariRef, devanagariChar, cursorPosition);
-  }
+    console.log(`Inserted Independent Vowel: ${vowelChar}`);
 }
 
+// **NEW**: Applies a Dependent Vowel (Matra)
+// Replaces the preceding Halant + ZWNJ with the matra
+export function applyDependentVowel(input, devanagariRef, matraChar, cursorPosition) {
+    const currentValue = input.value;
+    // Assumes cursor is after Halant + ZWNJ (remove 2 chars)
+    const charsToRemove = 2;
+    if (cursorPosition < charsToRemove) return; // Cannot apply if not enough chars
 
-// Update doubleCharMap based on clarification for 'ch'/'chh'
-// Assuming 'c' -> 'च', 'h' following 'च' makes 'छ'.
-doubleCharMap['h']['च'] = { resultChar: 'छ', remove: 3 }; // c + h -> chh (mapping 'ch' to 'छ')
-// Remove the triple map entry for 'h'/'च' as it's now handled by double map.
-delete tripleCharMap['h']['च'];
-if (Object.keys(tripleCharMap['h']).length === 0) {
-    delete tripleCharMap['h']; // Clean up empty entry
+    const newValue =
+        currentValue.slice(0, cursorPosition - charsToRemove) +
+        matraChar +
+        currentValue.slice(cursorPosition);
+    // Cursor position moves back by 2, then forward by matra length
+    const newCursorPosition = cursorPosition - charsToRemove + matraChar.length;
+
+    devanagariRef.value = newValue;
+    input.value = newValue;
+    input.setSelectionRange(newCursorPosition, newCursorPosition);
+    console.log(`Applied Dependent Vowel: ${matraChar}`);
 }
 
-// Ensure base map reflects 'c' -> 'च'
-singleConsonantMap['c'] = 'च';
+// **NEW**: Replaces a preceding Independent Vowel with a new one (for aa, ii etc.)
+export function replaceIndependentVowel(input, devanagariRef, newVowelChar, cursorPosition, charsToRemove) {
+    const currentValue = input.value;
+    if (cursorPosition < charsToRemove) return;
 
-//todo
-// decent typing - backspace failling for triple conjoins
+    const newValue =
+        currentValue.slice(0, cursorPosition - charsToRemove) +
+        newVowelChar +
+        currentValue.slice(cursorPosition);
+    const newCursorPosition = cursorPosition - charsToRemove + newVowelChar.length;
+
+    devanagariRef.value = newValue;
+    input.value = newValue;
+    input.setSelectionRange(newCursorPosition, newCursorPosition);
+    console.log(`Replaced Independent Vowel (${charsToRemove} chars) with: ${newVowelChar}`);
+}
+// todo backspace not working when 3 consonents join
