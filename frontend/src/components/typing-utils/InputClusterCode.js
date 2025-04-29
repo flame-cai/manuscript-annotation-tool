@@ -11,197 +11,213 @@ export function logCharactersBeforeCursor(input) {
     '-2': currentValue[cursorPosition - 2],
     '-1': currentValue[cursorPosition - 1]
   });
-    return
+  return;
 }
 
 // --- Character Constants ---
 export const HALANT = '\u094D';
 export const ZWNJ = '\u200C'; // Zero-Width Non-Joiner
+export const ZWJ = '\u200D';  // Zero-Width Joiner
+export const NUKTA = '\u093C'; // Combining Dot Below (Nukta)
+export const ANUSVARA = '\u0902'; // ं
+export const VISARGA = '\u0903'; // ः
+export const CANDRABINDU = '\u0901'; // ँ
+export const AVAGRAHA = '\u093D'; // ऽ
+export const DANDA = '\u0964'; // ।
+export const DOUBLE_DANDA = '\u0965'; // ॥
+export const OM = '\u0950'; // ॐ
+// Add constants for other special characters if keys are assigned
+// export const DEVANAGARI_ABBREVIATION_SIGN = '\u0970';
+// export const DEVANAGARI_SIGN_HIGH_SPACING_DOT = '\u0971';
+// export const DEVANAGARI_SIGN_INVERTED_CANDRABINDU = '\u0900';
+// export const DEVANAGARI_STRESS_SIGN_UDATTA = '\u0951';
+// export const DEVANAGARI_STRESS_SIGN_ANUDATTA = '\u0952';
 
 // --- Consonant Mappings ---
 // Maps single Roman keys directly to Devanagari base consonants
 export const singleConsonantMap = {
-  'k': 'क',
-  'g': 'ग',
-  'c': 'च', // Assuming 'c' maps to 'च' for 'ch'/'chh' combinations
-  'j': 'ज',
-  'T': 'ट',
-  't': 'त',
-  'D': 'ड',
-  'd': 'द',
-  'N': 'ण',
-  'n': 'न',
-  'p': 'प',
-  'b': 'ब',
-  'm': 'म',
-  'y': 'य',
-  'r': 'र',
-  'l': 'ल',
-  'v': 'व',
-  'V': 'ङ', // Typically 'G' or 'N^', but using 'V' as per original comment
-  'S': 'ष',
-  's': 'स',
-  'h': 'ह',
-  'L': 'ळ',
-  'Y': 'ञ', // Typically 'J' or 'n^', but using 'Y' as per original comment
-  'f': 'फ', // Added common mapping
-  'z': 'ज', // Added common mapping (base 'z', Nukta handled separately if needed)
+  'k': 'क', 'g': 'ग', 'c': 'च', 'j': 'ज', 'T': 'ट', 't': 'त', 'D': 'ड',
+  'd': 'द', 'N': 'ण', 'n': 'न', 'p': 'प', 'b': 'ब', 'm': 'म', 'y': 'य',
+  'r': 'र', 'l': 'ल', 'v': 'व', 'V': 'ङ', 'S': 'ष', 's': 'स', 'h': 'ह',
+  'L': 'ळ', 'Y': 'ञ',
+  'f': 'फ', // Note: 'f' also used for DANDA in miscMap
+  'z': 'ज', // Note: 'z' also used for vowel prefixes
+  'q': 'क', // Note: 'q' also used for HALANT in miscMap
 };
 
 // Structure: triggerKey: { precedingDevanagariBase: { resultChar: devanagariBase, remove: count } }
 export const doubleCharMap = {
   'h': { // Aspirates + sh
-    'क': { resultChar: 'ख', remove: 3 }, // k + h -> kh
-    'ग': { resultChar: 'घ', remove: 3 }, // g + h -> gh
-    'च': { resultChar: 'छ', remove: 3 }, // c + h -> chh
-    'ज': { resultChar: 'झ', remove: 3 }, // j + h -> jh
-    'ट': { resultChar: 'ठ', remove: 3 }, // T + h -> Th
-    'ड': { resultChar: 'ढ', remove: 3 }, // D + h -> Dh
-    'त': { resultChar: 'थ', remove: 3 }, // t + h -> th
-    'द': { resultChar: 'ध', remove: 3 }, // d + h -> dh
-    'प': { resultChar: 'फ', remove: 3 }, // p + h -> ph
-    'ब': { resultChar: 'भ', remove: 3 }, // b + h -> bh
-    'स': { resultChar: 'श', remove: 3 }, // s + h -> sh
-    // Need to handle 'Q'-like prefixes if using nuktas e.g. क़ -> ख़
+    'क': { resultChar: 'ख', remove: 3 }, 'ग': { resultChar: 'घ', remove: 3 },
+    'च': { resultChar: 'छ', remove: 3 }, 'ज': { resultChar: 'झ', remove: 3 },
+    'ट': { resultChar: 'ठ', remove: 3 }, 'ड': { resultChar: 'ढ', remove: 3 },
+    'त': { resultChar: 'थ', remove: 3 }, 'द': { resultChar: 'ध', remove: 3 },
+    'प': { resultChar: 'फ', remove: 3 }, 'ब': { resultChar: 'भ', remove: 3 },
+    'स': { resultChar: 'श', remove: 3 },
   },
   's': {
     'क': { resultChar: 'क्ष', remove: 3 }, // k + s -> ks (maps to kS = क्ष)
   },
-  'S': { // Assuming capital S for ष, also forms kS = क्ष
+  'S': {
     'क': { resultChar: 'क्ष', remove: 3 }  // k + S -> kS
   },
-  // Add nukta combinations if needed, e.g. 'H' for nukta
-  // 'H': {
-  //   'क': { resultChar: 'क़', remove: 3 }, // k + H -> क़
-  //   'ख': { resultChar: 'ख़', remove: 3 }, // kh + H -> ख़
-  //   'ग': { resultChar: 'ग़', remove: 3 }, // g + H -> ग़
-  //   'ज': { resultChar: 'ज़', remove: 3 }, // j + H -> ज़
-  //   'ड': { resultChar: 'ड़', remove: 3 }, // D + H -> ड़
-  //   'ढ': { resultChar: 'ढ़', remove: 3 }, // Dh + H -> ढ़
-  //   'फ': { resultChar: 'फ़', remove: 3 }, // p + H -> फ़ (or f?)
-  // }
 };
 
 // Structure: triggerKey: { precedingDevSequence: { resultChar: devanagariBase, remove: count } }
 export const tripleCharMap = {
   'y': {
-    'दन': { resultChar: 'ज्ञ', remove: 5 }, // d + n + y -> dny (ज्ञ) - Removes द् + ् + न + ् + ZWNJ
-    'गञ': { resultChar: 'ज्ञ', remove: 5 }, // g + Y + y (?) -> gny (ज्ञ) - Removes ग् + ् + ञ + ् + ZWNJ
-    'गन': { resultChar: 'ज्ञ', remove: 5 }, // g + n + y -> gny (ज्ञ) - Removes ग् + ् + न + ् + ZWNJ
+    'दन': { resultChar: 'ज्ञ', remove: 5 }, // d + n + y -> dny (ज्ञ)
+    'गञ': { resultChar: 'ज्ञ', remove: 5 }, // g + Y + y -> gny (ज्ञ)
+    'गन': { resultChar: 'ज्ञ', remove: 5 }, // g + n + y -> gny (ज्ञ)
   },
   'r': {
-    'श': { resultChar: 'श्र', remove: 3 }, // sh + r -> shr - Context: श् + ZWNJ. Replace with श्र् + ZWNJ.
+    'श': { resultChar: 'श्र', remove: 3 }, // sh + r -> shr
   },
 };
 
-// --- Vowel Mappings ---
 
+// --- Vowel Mappings ---
 // Dependent Vowels (Matras)
 export const dependentVowelMap = {
-    // Basic
-    'a':'ा', // ka -> का
-    'e':'े', // ke -> के
-    'i':'ि', // ki -> कि
-    'o':'ो', // ko -> को
-    'u':'ु', // ku -> कु
-
-    // Long / Diphthong
-    'aa': 'ा', // kaa -> का (same as 'a')
-    'ee': 'ी', // kee -> की
-    'ii': 'ी', // kii -> की
-    'uu': 'ू', // kuu -> कू
-    'oo': 'ू', // koo -> कू
-    'ai':'ै', // kai -> कै
-    'au':'ौ', // kau -> कौ (standard way, simpler than ा + ै)
-    'ou':'ौ', // kou -> कौ (alternative)
-
-    // R/L Vocalics
-    'Rri':'ृ', // kRri -> कृ
-    'RrI':'ॄ', // kRrI -> कॄ
-    'Lli':'ॢ', // kLli -> कॢ (rare)
-    'LlI':'ॣ', // kLlI -> कॣ (rare)
-
-    // Less Common / Specific Uses (Keep mappings, ensure handling)
-    'ze':'ॆ', // (Short E - South Indian) kze -> कॆ
-    'zo':'ॊ', // (Short O - South Indian) kzo -> कॊ
-
-    'aE':'ॅ', // (Candra E - Marathi) kaE -> कॅ
-    'aO':'ॉ', // (Candra O - Marathi/Borrowed) kaO -> कॉ
-
-    // Kashmiri / Bihari / Historic (May require AltGr or specific handling)
-    // For now, map them, handleInput can decide if they are triggered
-    'zau':'\u094F', // k + zau -> कॏ
-    // Empty keys omitted as they require special trigger (like AltGr)
-    // '\u093A': '', // Needs key
-    // '\u093B': '', // Needs key
-    // '\u094E': '', // Needs key
-    // '\u0955': '', // Needs key
-    // '\u0956': '', // Needs key
-    // '\u0957': '', // Needs key
+    'a':'ा', 'e':'े', 'i':'ि', 'o':'ो', 'u':'ु',
+    'aa': 'ा', 'ee': 'ी', 'ii': 'ी', 'uu': 'ू', 'oo': 'ू',
+    'ai':'ै', 'au':'ौ', 'ou':'ौ',
+    'Rri':'ृ', 'RrI':'ॄ', 'Lli':'ॢ', 'LlI':'ॣ',
+    'ze':'ॆ', 'zo':'ॊ', 'aE':'ॅ', 'aO':'ॉ',
+    'zau':'\u094F', // Kashmiri/Bihari Au Matra
 };
 
 // Independent Vowels
 export const independentVowelMap = {
-    // Basic
-    'a':'अ',
-    'A':'अ',
-    'i':'इ',
-    'I':'इ',
-    'u':'उ',
-    'U':'उ',
-    'e':'ए',
-    'E':'ए',
-    'o':'ओ',
-    'O':'ओ',
-
-    // Long / Diphthong
-    'aa':'आ',
-    'AA':'आ',
-    'ii':'ई',
-    'II':'ई',
-    'ee':'ई', // ee -> ई
-    'uu':'ऊ',
-    'UU':'ऊ',
-    'oo':'ऊ', // oo -> ऊ
-    'ai':'ऐ',
-    'AI':'ऐ', // Assuming AI maps like ai
-    'au':'औ',
-    'AU':'औ',
-    'ou':'औ', // ou -> औ
-
-    // R/L Vocalics
-    'RRi':'ऋ', // RRi -> ऋ
-    'RRI':'ॠ', // RRI -> ॠ
-    'LLi':'ऌ', // LLi -> ऌ
-    'LLI':'ॡ', // LLI -> ॡ
-
-    // Less Common / Specific Uses
-    'AE':'ॲ', // Marathi AE -> ॲ
-    'AO':'ऑ', // Marathi/Borrowed AO -> ऑ
-
-    // 'aE':'ऍ', // Historic/Less common variant of AE
-    // 'aO':'ऑ', // This seems redundant with AO, usually AO is preferred
-
+    'a':'अ', 'A':'अ', 'i':'इ', 'I':'इ', 'u':'उ', 'U':'उ',
+    'e':'ए', 'E':'ए', 'o':'ओ', 'O':'ओ',
+    'aa':'आ', 'AA':'आ', 'ii':'ई', 'II':'ई', 'ee':'ई',
+    'uu':'ऊ', 'UU':'ऊ', 'oo':'ऊ',
+    'ai':'ऐ', 'AI':'ऐ', 'au':'औ', 'AU':'औ', 'ou':'औ',
+    'RRi':'ऋ', 'RRI':'ॠ', 'LLi':'ऌ', 'LLI':'ॡ',
+    'AE':'ॲ', // Marathi AE
+    'AO':'ऑ', // Marathi/Borrowed AO
+    // 'aE':'ऍ', // Alternate AE - choose one or handle contextually
+    // 'aO':'ऑ', // Alternate AO - choose one or handle contextually
     'zEE':'ऎ', // South Indian Short E
-    'zO':'ऒ',  // South Indian Short O (Note: Map had \u0912 which is ओ, corrected to ऒ U+0912)
-
-    // Kashmiri / Bihari / Historic (May require AltGr or specific handling)
-    'zA':'ऄ',
-    'zAU':'ॵ',
-    // Empty keys omitted
+    'zO':'ऒ',  // South Indian Short O
+    'zA':'ऄ', // Historic/Regional A
+    'zAU':'ॵ', // Historic/Regional Au
 };
 
 // Combined lookup for potential vowel starting keys/sequences
-// Used to quickly identify if a key press *could* be a vowel
-// Add all keys that start any vowel sequence from both maps
 export const potentialVowelKeys = new Set([
     'a', 'A', 'e', 'E', 'i', 'I', 'o', 'O', 'u', 'U',
     'R', 'L', 'z' // Covers Rri, Lli, ze, zo, zau etc.
 ]);
 
+// Combined map for resolving full vowel sequences
+export const combinedVowelMap = { ...dependentVowelMap, ...independentVowelMap };
+
+// --- Vowel Sequence Handling Logic ---
+// Map for replacements like i+i -> ii, e+i -> ai, etc.
+// Structure: { precedingDevChar: { currentKey: replacementDevChar } }
+export const vowelReplacementMap = {
+    // Dependent Matra Replacements
+    'ि': { 'i': 'ी', 'e': 'ी' }, // short i + i/e -> long ii/ee
+    'ु': { 'u': 'ू', 'o': 'ू' }, // short u + u/o -> long uu/oo
+    'े': { 'e': 'ी', 'i': 'ै' }, // e + e -> ee, e + i -> ai
+    'ो': { 'o': 'ू', 'u': 'ौ', 'i': 'ौ' }, // o + o -> oo, o + u/i -> au
+    'ृ': { 'I': 'ॄ', 'i': 'ॄ' }, // Rri + I/i -> RrI
+    'ॢ': { 'I': 'ॣ', 'i': 'ॣ' }, // Lli + I/i -> LlI
+    'ा': { 'a': 'ा', 'E': 'ॅ', 'O': 'ॉ' }, // aa + a -> aa, aa + E -> aE Candra, aa + O -> aO Candra
+    // Independent Vowel Replacements
+    'इ': { 'i': 'ई', 'I': 'ई', 'e': 'ई', 'E': 'ई' }, // short I + i/I/e/E -> long II/EE
+    'उ': { 'u': 'ऊ', 'U': 'ऊ', 'o': 'ऊ', 'O': 'ऊ' }, // short U + u/U/o/O -> long UU/OO
+    'ए': { 'e': 'ई', 'E': 'ई', 'i': 'ऐ', 'I': 'ऐ' }, // E + e/E -> EE, E + i/I -> AI
+    'ओ': { 'o': 'ऊ', 'O': 'ऊ', 'u': 'औ', 'U': 'औ' }, // O + o/O -> OO, O + u/U -> AU
+    'अ': { 'a': 'आ', 'A': 'आ', 'E': 'ॲ', 'O': 'ऑ'}, // A + a/A -> AA, A + E -> AE(Marathi), A + O -> AO(Marathi)
+    'ऋ': { 'I': 'ॠ' }, // RRi + I -> RRI
+    'ऌ': { 'I': 'ॡ' }, // LLi + I -> LLI
+};
+
+
+// --- Miscellaneous Mappings ---
+export const miscMap = { // VOWEL MODIFIERS(m), HALANT(H), NUKTA(N), NUMBERS, CURRENCY etc.
+    // Single Key Modifiers / Symbols
+    'M': ANUSVARA,      // 'ं'
+    'H': VISARGA,       // 'ः'
+    'F': AVAGRAHA,      // 'ऽ'
+    'q': HALANT,        // '्' (Explicit Halant ONLY - applies differently than Halant+ZWNJ)
+    ' ': ' ',
+    '.': '.',           // Period
+    'f': DANDA,         // '।', Note: 'f' is also consonant 'फ'
+    '0': '०', '1': '१', '2': '२', '3': '३', '4': '४',
+    '5': '५', '6': '६', '7': '७', '8': '८', '9': '९',
+    'W': ZWJ,           // '\u200D' (Zero Width Joiner)
+    'w': ZWNJ,          // '\u200C' (Zero Width Non-Joiner)
+
+    // Sequences (Handled in handleInput based on last key)
+    'MM': CANDRABINDU,  // 'ँ' (Replaces Anusvara)
+    '.N': NUKTA,        // '◌़' (Applies to preceding consonant)
+    'ff': DOUBLE_DANDA, // '॥' (Replaces Danda)
+    'om': OM,           // 'ॐ'
+
+    // --- Keys needing assignment for unmapped chars ---
+    // Choose appropriate keys and uncomment/add here if needed
+    // Example assignments:
+    // '\'': '\u0970', // DEVANAGARI ABBREVIATION SIGN
+    // '_': '\u0971',  // DEVANAGARI SIGN HIGH SPACING DOT
+    // '^': '\u0900',  // DEVANAGARI SIGN INVERTED CANDRABINDU
+    // '+': '\u0951',  // DEVANAGARI STRESS SIGN UDATTA
+    // '=': '\u0952',  // DEVANAGARI STRESS SIGN ANUDATTA
+};
+
+// Helper Map for simple direct insertions (no context needed beyond the key itself)
+// Includes digits, space, period, ZWJ, ZWNJ, Avagraha, and any assigned simple symbols
+export const simpleInsertMap = {
+    ' ': ' ', '.': '.',
+    '0': '०', '1': '१', '2': '२', '3': '३', '4': '४',
+    '5': '५', '6': '६', '7': '७', '8': '८', '9': '९',
+    'W': ZWJ, 'w': ZWNJ,
+    'F': AVAGRAHA, // Avagraha can usually be inserted directly
+    // Add keys for other simple insertions if assigned in miscMap
+    // '\'': '\u0970', '_': '\u0971', '^': '\u0900', '+': '\u0951', '=': '\u0952',
+};
+
+// --- Sequence Prefix Information ---
+// Helps identify potential multi-character sequences
+// Structure: { key: potentialNextKey[] }
+// ** Define the base object first **
+export const sequencePrefixes = {
+    // Vowel prefixes
+    'R': ['r', 'R', 'i', 'I'], // For Rr, RR, Rri, RRI
+    'L': ['l', 'L', 'i', 'I'], // For Ll, LL, Lli, LLI
+    'z': ['e', 'o', 'a', 'E', 'A', 'O', 'U'], // For ze, zo, za, zE, zA etc.
+    'a': ['a', 'e', 'i', 'u', 'E', 'O'], // For aa, ae, ai, au, aE, aO
+    'A': ['A', 'E', 'I', 'O', 'U'], // For AA, AE, AI, AO, AU
+    'e': ['e', 'i'], // For ee, ei (ai)
+    'E': ['E', 'I'], // For EE, EI (ai)
+    'i': ['i', 'e'], // For ii, ie (ee)
+    'I': ['I', 'E'], // For II, IE (ee)
+    'o': ['o', 'u', 'i'], // For oo, ou (au), oi (au?) - ** Initial definition **
+    'O': ['O', 'U', 'I'], // For OO, OU (au), OI (au?)
+    'u': ['u', 'o'], // For uu, uo (oo)
+    'U': ['U', 'O'], // For UU, UO (oo)
+
+    // Misc prefixes
+    '.': ['N'], // For Nukta sequence .N
+    'M': ['M'], // For Chandrabindu sequence MM
+    'f': ['f'], // For Double Danda sequence ff
+    // Add 'A', 'U' prefixes if needed for 'AUM' later
+};
+
+// ** Modify the object after definition **
+// Add 'm' to the potential keys following 'o' for the 'om' sequence
+sequencePrefixes['o'] = [...(sequencePrefixes['o'] || []), 'm'];
+// If you were implementing AUM:
+// sequencePrefixes['A'] = [...(sequencePrefixes['A'] || []), 'U']; // If A can start AU and AUM
+// sequencePrefixes['U'] = [...(sequencePrefixes['U'] || []), 'M']; // If U can start UU and follow A in AUM
+
+
 // --- Helper Functions ---
 
-// Insert Character Sequence (Generic) - Useful for independent vowels
+// Insert Character Sequence (Generic)
 export function insertCharacter(input, devanagariRef, charToInsert, cursorPosition) {
     const currentValue = input.value;
     const newValue =
@@ -217,14 +233,14 @@ export function insertCharacter(input, devanagariRef, charToInsert, cursorPositi
     logCharactersBeforeCursor(input);
 }
 
-// Replace Previous Characters (Generic) - Useful for vowel modifications
+// Replace Previous Characters (Generic)
 export function replacePreviousChars(input, devanagariRef, charsToRemove, charToInsert, cursorPosition) {
     const currentValue = input.value;
     const startReplacePos = cursorPosition - charsToRemove;
 
     // Ensure we don't go below index 0
     if (startReplacePos < 0) {
-        console.error("replacePreviousChars: Attempting to remove too many characters.");
+        console.error(`replacePreviousChars: Attempting to remove ${charsToRemove} chars from pos ${cursorPosition}.`);
         return; // Or handle differently
     }
 
@@ -243,11 +259,10 @@ export function replacePreviousChars(input, devanagariRef, charsToRemove, charTo
     logCharactersBeforeCursor(input);
 }
 
-
 // Helper to apply Dependent Vowel (Matra)
 export function applyDependentVowel(input, devanagariRef, matra, cursorPosition) {
     const currentValue = input.value;
-    // Context assumes: Base + Halant + ZWNJ before cursor
+    // Context assumes: Base (charM3) + Halant (charM2) + ZWNJ (charM1) before cursor
     const baseConsonant = currentValue[cursorPosition - 3];
     const charsToRemove = 3; // Base + Halant + ZWNJ
     const charToInsert = baseConsonant + matra;
@@ -257,7 +272,7 @@ export function applyDependentVowel(input, devanagariRef, matra, cursorPosition)
     console.log(`Applied Matra: ${matra} to ${baseConsonant}`);
 }
 
-// Insert Consonant Sequence (Existing Helper)
+// Insert Consonant Sequence (Base + Halant + ZWNJ)
 export function insertConsonantSequence(input, devanagariRef, baseChar, cursorPosition) {
     const currentValue = input.value;
     const sequence = baseChar + HALANT + ZWNJ;
@@ -277,7 +292,7 @@ export function insertConsonantSequence(input, devanagariRef, baseChar, cursorPo
     logCharactersBeforeCursor(input);
 }
 
-// Replace Consonant Sequence (Existing Helper)
+// Replace previous sequence with new Consonant Sequence (Base + Halant + ZWNJ)
 export function replaceConsonantSequence(input, devanagariRef, baseChar, cursorPosition, charsToRemove) {
     const currentValue = input.value;
     const sequence = baseChar + HALANT + ZWNJ;
@@ -298,133 +313,41 @@ export function replaceConsonantSequence(input, devanagariRef, baseChar, cursorP
     logCharactersBeforeCursor(input);
 }
 
-// Handle Single Consonant (Existing Helper)
+// Handle insertion of a single consonant character
 export function handleSingleConsonant(event, devanagariRef, devanagariChar) {
   const input = event.target;
   const cursorPosition = input.selectionStart;
   const currentValue = input.value;
   const characterRelativeMinus1 = currentValue[cursorPosition - 1];
 
-  // No preventDefault needed here, it's handled in handleInput before calling this
+  // No preventDefault needed here, it's handled in handleInput
 
   if (characterRelativeMinus1 === ZWNJ) {
-    // If ZWNJ is just before cursor (likely from explicit halant or previous op),
-    // remove it before inserting the new consonant sequence.
-    // We need to replace the ZWNJ, not just insert after it.
+    // If ZWNJ is just before cursor (e.g., after explicit H+ZWNJ),
+    // replace the ZWNJ with the new consonant sequence.
     replacePreviousChars(input, devanagariRef, 1, devanagariChar + HALANT + ZWNJ, cursorPosition);
     console.log(`Replaced ZWNJ with ${devanagariChar} + Halant + ZWNJ`);
 
   } else {
-    // Standard insertion
+    // Standard insertion: Append Consonant + Halant + ZWNJ
     insertConsonantSequence(input, devanagariRef, devanagariChar, cursorPosition);
   }
 }
 
-// --- Vowel Sequence Handling Logic ---
-// This map helps determine potential replacements for multi-key vowels
-// Structure: { precedingDevChar: { currentKey: replacementDevChar } }
-// Needs to cover both dependent and independent forms
-export const vowelReplacementMap = {
-    // --- Dependent Vowel Replacements (Matras) ---
-    'ि': { // Preceding character is short i matra (from 'i')
-        'i': 'ी', // 'i' + 'i' -> long ii matra
-        'e': 'ी', // 'i' + 'e' -> long ee matra (assuming ie -> ee)
-        // 'a': ? No common ia combination like this
-        // 'u': ? No common iu combination like this
-    },
-    'ु': { // Preceding character is short u matra (from 'u')
-        'u': 'ू', // 'u' + 'u' -> long uu matra
-        'o': 'ू', // 'u' + 'o' -> long oo matra (assuming uo -> oo)
-    },
-    'े': { // Preceding character is e matra (from 'e')
-        'e': 'ी', // 'e' + 'e' -> long ee matra (common alternative)
-        'i': 'ै', // 'e' + 'i' -> ai matra
-    },
-    'ो': { // Preceding character is o matra (from 'o')
-        'o': 'ू', // 'o' + 'o' -> long oo matra (common alternative)
-        'u': 'ौ', // 'o' + 'u' -> au matra
-        'i': 'ौ', // 'o' + 'i' -> oi -> au matra (less common, maybe?)
-    },
-    'ृ': { // Preceding character is Rri matra (from 'Rri')
-        'I': 'ॄ', // 'Rri' + 'I' -> RrI matra
-        'i': 'ॄ', // 'Rri' + 'i' -> RrI matra (alternative?)
-    },
-    'ॢ': { // Preceding character is Lli matra (from 'Lli')
-        'I': 'ॣ', // 'Lli' + 'I' -> LlI matra
-        'i': 'ॣ', // 'Lli' + 'i' -> LlI matra (alternative?)
-    },
-    'ा': { // Preceding character is aa matra (from 'a'/'aa')
-        'a': 'ा', // 'a' + 'a' -> aa matra (no change)
-        'E': 'ॅ', // 'a' + 'E' -> aE matra
-        'O': 'ॉ', // 'a' + 'O' -> aO matra
-        // 'i': 'ै', // a + i -> ai ? Usually e + i -> ai
-        // 'u': 'ौ', // a + u -> au ? Usually o + u -> au
-    },
-    // Add other specific matra combinations if needed (ze, zo etc.)
+// Apply Nukta to the preceding consonant (C+H+ZWNJ -> C+Nukta+H+ZWNJ)
+export function applyNukta(input, devanagariRef, cursorPosition) {
+    const currentValue = input.value;
+    // Context: Base (charM3) + Halant (charM2) + ZWNJ (charM1)
+     // Basic check to prevent errors if context is wrong, though handleInput should verify
+    if (cursorPosition < 3 || currentValue[cursorPosition - 1] !== ZWNJ || currentValue[cursorPosition - 2] !== HALANT) {
+        console.error("applyNukta called with invalid context.");
+        return;
+    }
+    const baseConsonant = currentValue[cursorPosition - 3];
+    const charsToRemove = 3; // Base + Halant + ZWNJ
+    // Insert Base + Nukta + Halant + ZWNJ
+    const charToInsert = baseConsonant + NUKTA + HALANT + ZWNJ;
 
-    // --- Independent Vowel Replacements ---
-    'इ': { // Preceding character is short I (from 'i'/'I')
-        'i': 'ई', // 'i' + 'i' -> long II
-        'I': 'ई', // 'i' + 'I' -> long II
-        'e': 'ई', // 'i' + 'e' -> long EE
-        'E': 'ई', // 'i' + 'E' -> long EE
-    },
-    'उ': { // Preceding character is short U (from 'u'/'U')
-        'u': 'ऊ', // 'u' + 'u' -> long UU
-        'U': 'ऊ', // 'u' + 'U' -> long UU
-        'o': 'ऊ', // 'u' + 'o' -> long OO
-        'O': 'ऊ', // 'u' + 'O' -> long OO
-    },
-    'ए': { // Preceding character is E (from 'e'/'E')
-        'e': 'ई', // 'e' + 'e' -> long EE
-        'E': 'ई', // 'e' + 'E' -> long EE
-        'i': 'ऐ', // 'e' + 'i' -> AI
-        'I': 'ऐ', // 'e' + 'I' -> AI
-    },
-    'ओ': { // Preceding character is O (from 'o'/'O')
-        'o': 'ऊ', // 'o' + 'o' -> long OO
-        'O': 'ऊ', // 'o' + 'O' -> long OO
-        'u': 'औ', // 'o' + 'u' -> AU
-        'U': 'औ', // 'o' + 'U' -> AU
-    },
-    'अ': { // Preceding character is A (from 'a'/'A')
-        'a': 'आ', // 'a' + 'a' -> AA
-        'A': 'आ', // 'a' + 'A' -> AA
-        'E': 'ॲ', // 'a' + 'E' -> AE (Marathi)
-        'O': 'ऑ', // 'a' + 'O' -> AO (Marathi/Borrowed)
-        // 'i': 'ऐ', // a + i -> ai? Usually e + i -> ai
-        // 'u': 'औ', // a + u -> au? Usually o + u -> au
-        // 'e': 'ऍ', // a + e -> aE (Historic?)
-    },
-    'ऋ': { // Preceding character is RRi (from 'RRi')
-        'I': 'ॠ', // 'RRi' + 'I' -> RRI
-    },
-    'ऌ': { // Preceding character is LLi (from 'LLi')
-        'I': 'ॡ', // 'LLi' + 'I' -> LLI
-    },
-     // Add other specific independent vowel combinations if needed
-};
-
-// --- Complex Sequence Prefixes ---
-// Helps identify potential multi-character sequences like 'Rr' or 'Ll'
-// Structure: { key: potentialNextKey[] }
-export const sequencePrefixes = {
-    'R': ['r', 'R'], // R can be followed by r/i (Rr) or R/I (RR)
-    'L': ['l', 'L'], // L can be followed by l/i (Ll) or L/I (LL)
-    'z': ['e', 'o', 'a', 'E', 'A', 'O', 'U'], // z can start ze, zo, za, zE, zA etc.
-    'a': ['a', 'e', 'i', 'u', 'E', 'O'], // a can start aa, ae, ai, au, aE, aO
-    'A': ['A', 'E', 'I', 'O', 'U'], // A can start AA, AE, AI, AO, AU
-    'e': ['e', 'i'], // e can start ee, ei (ai)
-    'E': ['E', 'I'], // E can start EE, EI (ai)
-    'i': ['i', 'e'], // i can start ii, ie (ee)
-    'I': ['I', 'E'], // I can start II, IE (ee)
-    'o': ['o', 'u', 'i'], // o can start oo, ou (au), oi (au?)
-    'O': ['O', 'U', 'I'], // O can start OO, OU (au), OI (au?)
-    'u': ['u', 'o'], // u can start uu, uo (oo)
-    'U': ['U', 'O'], // U can start UU, UO (oo)
-};
-
-// Create combined maps for easier lookup during processing
-// Map Roman sequences to their Devanagari outputs (both dep/indep where applicable)
-// This helps resolve sequences like 'Rri', 'aE' etc directly.
-export const combinedVowelMap = { ...dependentVowelMap, ...independentVowelMap };
+    replacePreviousChars(input, devanagariRef, charsToRemove, charToInsert, cursorPosition);
+    console.log(`Applied Nukta to ${baseConsonant}`);
+}
