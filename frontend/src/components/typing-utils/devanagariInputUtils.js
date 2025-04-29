@@ -1,87 +1,97 @@
-// devanagariInputUtils.js
 import {
-    // Consonants
-    singleConsonantMap, doubleCharMap, tripleCharMap,
-    handleSingleConsonant, insertConsonantSequence, replaceConsonantSequence,
-    // Vowels (New Imports)
-    independentVowelMap, dependentVowelMap, vowelInputOrder,
-    insertIndependentVowel, applyDependentVowel, replaceIndependentVowel,
-    // Utils
-    logCharactersBeforeCursor, HALANT, ZWNJ
-} from './InputClusterCode'
-
-// Helper to check if a character is a Devanagari base consonant
-function isDevanagariConsonant(char) {
-    if (!char) return false;
-    const code = char.charCodeAt(0);
-    // Range U+0915 to U+0939 (क to ह), plus U+0958 to U+095F (क़ to य़), plus others
-    return (code >= 0x0915 && code <= 0x0939) || (code >= 0x0958 && code <= 0x095F) ||
-           ['ळ', 'ङ', 'ञ', 'ण', 'ष'].includes(char); // Add specific consonants if needed
-}
-
-// Helper to check if a character is a Devanagari independent vowel
-function isIndependentVowel(char) {
-     if (!char) return false;
-     // Check against the values in the independentVowelMap for single chars
-     return Object.values(independentVowelMap).includes(char);
-    // More specific range check: U+0904 to U+0914, plus U+0960 to U+0961, etc.
-    // const code = char.charCodeAt(0);
-    // return (code >= 0x0904 && code <= 0x0914) || (code >= 0x0960 && code <= 0x0961);
-}
-
-
-export function handleInput(event, devanagariRef) {
-    // --- Initial Setup & Logging ---
-    if (event.metaKey || event.ctrlKey || event.altKey) { // Allow Shift
+    singleConsonantMap,
+    doubleCharMap,
+    tripleCharMap,
+    dependentVowelMap,      // Import new map
+    independentVowelMap,    // Import new map
+    combinedVowelMap,       // Import new map
+    potentialVowelKeys,     // Import helper set
+    vowelReplacementMap,    // Import replacement logic map
+    sequencePrefixes,       // Import sequence prefix info
+    handleSingleConsonant,
+    insertCharacter,        // Import new helper
+    replacePreviousChars,   // Import new helper
+    applyDependentVowel,    // Import new helper
+    insertConsonantSequence,
+    replaceConsonantSequence,
+    logCharactersBeforeCursor,
+    HALANT,
+    ZWNJ
+  } from './InputClusterCode'
+  
+  // Store the effective last typed key (ignoring modifiers, used for sequences)
+  let lastEffectiveKey = null;
+  
+  export function handleInput(event, devanagariRef) {
+    const key = event.key;
+    const input = event.target;
+    const cursorPosition = input.selectionStart;
+    const currentValue = input.value;
+  
+    // --- Basic Filtering ---
+    // Ignore keys with Ctrl/Meta/Alt (allow AltGr later if needed)
+    // Allow Shift only if it produces a capital letter used in maps
+    if (event.metaKey || event.ctrlKey || event.altKey) { // Removed Shift check here
+        console.log("Ignoring Ctrl/Meta/Alt key press");
         return;
     }
-    if (event.key.length > 1 && !['Backspace', 'Shift'].includes(event.key)) { // Allow Shift for capitals
-       // Ignore arrow keys, Enter, Tab etc. for typing logic
-       // Could add specific handling for Enter/Tab if needed later
-       return;
-    }
-    // If only Shift is pressed, do nothing
-    if (event.key === 'Shift') return;
-
-
-    const input = event.target;
-    let cursorPosition = input.selectionStart; // Use let as it might change before processing
-    const currentValue = input.value;
-    const key = event.key; // The Roman key pressed (could be upper or lower)
-
+  
+     // Check if Shift resulted in a symbol not in maps (e.g., Shift+1 = !)
+     // Or if it's a non-printing key (except Backspace)
+     let effectiveKey = key; // Use 'key' by default
+     if (event.shiftKey && key.length === 1 && !key.match(/[a-zA-Z]/)) {
+          console.log("Ignoring Shift + Symbol key press");
+          lastEffectiveKey = null; // Reset sequence tracking
+          return; // Ignore Shift+Number, Shift+Symbol etc.
+     } else if (key.length > 1 && key !== 'Backspace') {
+         console.log(`Ignoring functional key: ${key}`);
+         lastEffectiveKey = null; // Reset sequence tracking
+         return; // Ignore Arrow Keys, Enter, Tab, etc.
+     } else if (event.shiftKey && key.length === 1 && key.match(/[A-Z]/)) {
+         effectiveKey = key; // Use the uppercase key produced by Shift
+     } else if (key.length === 1 && key.match(/[a-z]/)) {
+         effectiveKey = key; // Use the lowercase key
+     } else if (key === 'Backspace') {
+          effectiveKey = 'Backspace';
+     } else {
+          // Allow numbers, basic symbols? Or ignore them too?
+          // For now, let unmapped chars pass through fallback.
+          console.log(`Key "${key}" might pass to fallback`);
+          effectiveKey = key; // Pass it along
+     }
+  
+  
+    // --- Log current state ---
     console.log("-------------------------");
-    console.log(`Key pressed: ${key} (at pos ${cursorPosition})`);
+    console.log(`Effective Key: ${effectiveKey} (at pos ${cursorPosition}) | Last Key: ${lastEffectiveKey}`);
     console.log("State BEFORE processing:");
     logCharactersBeforeCursor(input);
-
-    // Get Context Characters
+  
+    // --- Get Context Characters ---
     const charM1 = currentValue[cursorPosition - 1];
     const charM2 = currentValue[cursorPosition - 2];
     const charM3 = currentValue[cursorPosition - 3];
     const charM4 = currentValue[cursorPosition - 4];
     const charM5 = currentValue[cursorPosition - 5];
-
-    // --- Explicit Halant ('q' key) ---
-    if (key === 'q') {
+  
+    // --- Explicit Halant ('q' key - now mapped to 'क') ---
+    // Re-purpose 'q' or choose another key (e.g., '~') for explicit Halant+ZWNJ
+    // Using '`' (backtick) as an example for explicit halant inserter
+    if (effectiveKey === '`') {
         event.preventDefault();
-        // Insert Halant + ZWNJ
+        // Insert only Halant+ZWNJ, useful for explicit conjunct control
         const sequence = HALANT + ZWNJ;
-        const newValue =
-            currentValue.slice(0, cursorPosition) +
-            sequence +
-            currentValue.slice(cursorPosition);
-        devanagariRef.value = newValue;
-        input.value = newValue;
-        input.setSelectionRange(cursorPosition + sequence.length, cursorPosition + sequence.length);
+        insertCharacter(input, devanagariRef, sequence, cursorPosition);
         console.log('Inserted explicit halant + ZWNJ');
-        logCharactersBeforeCursor(input);
+        lastEffectiveKey = effectiveKey; // Update last key
         return;
     }
-
-    // --- Backspace Handling (Keep Unchanged) ---
-    if (key === 'Backspace') {
-        // Condition 1: Remove Base + Halant + ZWNJ cluster
-        if (charM1 === ZWNJ && charM2 === HALANT && isDevanagariConsonant(charM3)) {
+  
+    // --- Backspace Handling (Keep existing logic) ---
+    if (effectiveKey === 'Backspace') {
+        lastEffectiveKey = null; // Reset sequence tracking on backspace
+        // Condition 1: Remove Base + Halant + ZWNJ
+        if (charM1 === ZWNJ && charM2 === HALANT && cursorPosition >=3 ) {
             event.preventDefault();
             console.log('Backspace: removing Base + Halant + ZWNJ');
             const newValue =
@@ -93,172 +103,209 @@ export function handleInput(event, devanagariRef) {
             logCharactersBeforeCursor(input);
             return;
         }
-        // Condition 2: Original special ZWNJ insertion logic (kept as requested)
-        else if (charM2 === HALANT && cursorPosition >= 2) {
+        // Condition 2: Original logic - Remove char before cursor, insert ZWNJ if charM2 was Halant
+         else if (charM2 === HALANT && cursorPosition >= 2) {
              event.preventDefault();
              const newValue =
-               currentValue.slice(0, cursorPosition - 1) + ZWNJ + currentValue.slice(cursorPosition);
+               currentValue.slice(0, cursorPosition - 1) + // Remove charM1
+               ZWNJ +                                      // Insert ZWNJ
+               currentValue.slice(cursorPosition);
              console.log('Backspace: Removed last char, Inserted ZWNJ after halant (original logic)');
              devanagariRef.value = newValue;
              input.value = newValue;
-             input.setSelectionRange(cursorPosition, cursorPosition); // Cursor position remains same
+             input.setSelectionRange(cursorPosition, cursorPosition); // Cursor moves forward by 1 (relative to removal)
              logCharactersBeforeCursor(input);
              return;
-        }
-        // Condition 3: Default backspace
+         }
+        // Condition 3: Default backspace behavior
         else {
             console.log('Backspace: Default behavior');
-             queueMicrotask(() => {
-                 devanagariRef.value = input.value;
-                 logCharactersBeforeCursor(input);
-             });
-            // No preventDefault, let browser handle it
+            // Let browser handle, update ref in microtask
+            queueMicrotask(() => {
+                devanagariRef.value = input.value;
+                logCharactersBeforeCursor(input);
+            });
+            // No preventDefault here
             return;
         }
     }
-
-
-    // --- Consonant Handling ---
-
-    // Check Triple Consonants
-    const tripleCheckKey = key === 'Shift' ? event.code : key; // Use key unless it's Shift
-    const tripleMappings = tripleCharMap[tripleCheckKey.toLowerCase()] || tripleCharMap[tripleCheckKey]; // Check lower/upper
-    if (tripleMappings && cursorPosition >= 5 && charM1 === ZWNJ && charM2 === HALANT && charM4 === HALANT) {
-        const precedingSequence = charM5 + charM3; // e.g., "दन"
-        if (tripleMappings[precedingSequence]) {
-            const mapping = tripleMappings[precedingSequence];
-            event.preventDefault();
-            replaceConsonantSequence(input, devanagariRef, mapping.resultChar, cursorPosition, mapping.remove);
-            console.log("State AFTER processing (Triple Consonant):");
-            logCharactersBeforeCursor(input);
-            return;
+  
+  
+    // --- Check for Consonant Sequence Completion (Triples, Doubles) ---
+    // Keep this logic exactly as it was
+    // Triple Check
+    const tripleMappings = tripleCharMap[effectiveKey];
+    if (tripleMappings && cursorPosition >= 5) {
+        if (charM1 === ZWNJ && charM2 === HALANT && charM4 === HALANT) {
+            const precedingSequence = charM5 + charM3;
+            if (tripleMappings[precedingSequence]) {
+                const mapping = tripleMappings[precedingSequence];
+                event.preventDefault();
+                replaceConsonantSequence(input, devanagariRef, mapping.resultChar, cursorPosition, mapping.remove);
+                lastEffectiveKey = effectiveKey; // Update last key
+                return;
+            }
+        }
+         if (effectiveKey === 'r' && charM1 === ZWNJ && charM2 === HALANT && charM3 === 'श' && tripleMappings['श']) {
+              const mapping = tripleMappings['श'];
+              event.preventDefault();
+              replaceConsonantSequence(input, devanagariRef, mapping.resultChar, cursorPosition, mapping.remove);
+              lastEffectiveKey = effectiveKey; // Update last key
+              return;
+         }
+    }
+  
+    // Double Check
+    const doubleMappings = doubleCharMap[effectiveKey];
+    if (doubleMappings && cursorPosition >= 3) {
+        if (charM1 === ZWNJ && charM2 === HALANT) {
+            const precedingBase = charM3;
+            if (doubleMappings[precedingBase]) {
+                const mapping = doubleMappings[precedingBase];
+                event.preventDefault();
+                replaceConsonantSequence(input, devanagariRef, mapping.resultChar, cursorPosition, mapping.remove);
+                lastEffectiveKey = effectiveKey; // Update last key
+                return;
+            }
         }
     }
-     if (key === 'r' && tripleCharMap['r'] && cursorPosition >= 3 && charM1 === ZWNJ && charM2 === HALANT && charM3 === 'श') {
-         // Special case for 'shr'
-         const mapping = tripleCharMap['r']['श'];
-         event.preventDefault();
-         replaceConsonantSequence(input, devanagariRef, mapping.resultChar, cursorPosition, mapping.remove);
-         console.log("State AFTER processing (Triple Consonant - shr):");
-         logCharactersBeforeCursor(input);
-         return;
-     }
-
-
-    // Check Double Consonants
-    const doubleCheckKey = key === 'Shift' ? event.code : key;
-    const doubleMappings = doubleCharMap[doubleCheckKey.toLowerCase()] || doubleCharMap[doubleCheckKey];
-    if (doubleMappings && cursorPosition >= 3 && charM1 === ZWNJ && charM2 === HALANT) {
-        const precedingBase = charM3;
-        if (doubleMappings[precedingBase]) {
-            const mapping = doubleMappings[precedingBase];
-            event.preventDefault();
-             if (mapping.type === 'VOWEL_SIGN_DIRECT') {
-                 // Special case from map: replace consonant cluster with vowel applied form
-                 const newValue = currentValue.slice(0, cursorPosition - mapping.remove) +
-                                  mapping.resultChar + // Direct insertion (e.g., 'रि')
-                                  currentValue.slice(cursorPosition);
-                 const newCursorPos = cursorPosition - mapping.remove + mapping.resultChar.length;
-                 devanagariRef.value = newValue;
-                 input.value = newValue;
-                 input.setSelectionRange(newCursorPos, newCursorPos);
-                 console.log(`Applied Vowel Sign Directly: ${mapping.resultChar}`);
-
-             } else {
-                 // Standard consonant replacement
-                 replaceConsonantSequence(input, devanagariRef, mapping.resultChar, cursorPosition, mapping.remove);
-             }
-            console.log("State AFTER processing (Double Consonant):");
-            logCharactersBeforeCursor(input);
-            return;
-        }
-    }
-
-    // Check Single Consonants
-    const singleCheckKey = key === 'Shift' ? event.code : key;
-    const singleConsonant = singleConsonantMap[singleCheckKey]; // Case sensitive check first
-    if (singleConsonant) {
-        event.preventDefault();
-        handleSingleConsonant(event, devanagariRef, singleConsonant);
-        // Logging is inside handleSingleConsonant now
-        return;
-    }
-
-
-    // --- Vowel Handling ---
-    let vowelHandled = false;
-    // Iterate through possible vowel inputs, checking longest first
-    for (const romanKey of vowelInputOrder) {
-        // Check if the current key *completes* this romanKey sequence
-        if (key === romanKey[romanKey.length - 1]) { // Match last char of sequence
-             // Need to reconstruct the potential full sequence based *only* on the Devanagari context
-             // This is hard without a Roman buffer. Let's simplify: Check if the current key *is* a vowel input.
-
-             if (key !== romanKey) continue; // For now, only check exact key matches in the loop
-
-             const indVowel = independentVowelMap[romanKey];
-             const depVowel = dependentVowelMap[romanKey];
-
-             if (!indVowel && !depVowel) continue; // Should not happen due to filter
-
-             event.preventDefault(); // Assume we'll handle it
-
-             // Context Check:
-             // 1. Preceded by Consonant + Halant + ZWNJ? Apply dependent vowel.
-             if (charM1 === ZWNJ && charM2 === HALANT && isDevanagariConsonant(charM3)) {
-                 applyDependentVowel(input, devanagariRef, depVowel, cursorPosition);
-                 vowelHandled = true;
-                 break; // Stop checking shorter vowels
-             }
-             // 2. Preceded by an Independent Vowel? Check for combination (aa, ii etc.)
-             //    This requires checking if the *previous* Roman key logically matches charM1. Too complex.
-             //    Let's simplify: Only combine if the current *romanKey* implies it (e.g. "aa", "ii").
-             //    If romanKey length > 1 and charM1 is the independent vowel of the *first part* of romanKey.
-             if (romanKey.length > 1 && isIndependentVowel(charM1)) {
-                  // Get the expected preceding vowel for this combination
-                  const firstPartKey = romanKey.slice(0, -1); // e.g., "a" from "aa"
-                  const expectedPrecedingVowel = independentVowelMap[firstPartKey];
-                  if (charM1 === expectedPrecedingVowel) {
-                       replaceIndependentVowel(input, devanagariRef, indVowel, cursorPosition, charM1.length);
-                       vowelHandled = true;
-                       break;
-                  }
-             }
-
-             // 3. Special R/L Vowel Signs (e.g., Rri -> ृ)
-             //    Check if the key implies one and the context matches Consonant + Halant + ZWNJ
-              if (['Rri', 'RRI', 'Lli', 'LlI'].includes(romanKey)) {
-                   const expectedConsonant = romanKey.startsWith('R') ? 'र' : 'ल';
-                   if (charM1 === ZWNJ && charM2 === HALANT && charM3 === expectedConsonant) {
-                        applyDependentVowel(input, devanagariRef, depVowel, cursorPosition); // depVowel is ृ, ॄ etc.
-                        vowelHandled = true;
-                        break;
-                   }
+  
+    // --- *** NEW VOWEL HANDLING LOGIC *** ---
+  
+    let potentialSequence = '';
+    if (lastEffectiveKey && sequencePrefixes[lastEffectiveKey]?.includes(effectiveKey)) {
+        potentialSequence = lastEffectiveKey + effectiveKey;
+        console.log("Potential Multi-char sequence:", potentialSequence);
+  
+        // Check 2-char sequences first (e.g., 'aa', 'ii', 'ai', 'au', 'Rr', 'Ll', 'aE' etc.)
+        if (combinedVowelMap[potentialSequence]) {
+              // Check context: Does this sequence modify a preceding consonant or vowel?
+              const isDependentContext = charM1 === ZWNJ && charM2 === HALANT && cursorPosition >= 3;
+              const isVowelReplacementContext = vowelReplacementMap[charM1]?.[effectiveKey]; // Check if prev char can be replaced by this key
+  
+              if (isVowelReplacementContext) {
+                  // Handle replacements like i -> ii, e -> ai, a -> aa
+                  event.preventDefault();
+                  const replacementChar = vowelReplacementMap[charM1][effectiveKey];
+                  replacePreviousChars(input, devanagariRef, 1, replacementChar, cursorPosition);
+                  console.log(`Vowel Replacement: ${charM1} + ${effectiveKey} -> ${replacementChar}`);
+                  lastEffectiveKey = effectiveKey;
+                  return;
+              } else if (isDependentContext && dependentVowelMap[potentialSequence]) {
+                   // Apply complex dependent vowel like Rri, RrI, Lli, LlI, aE, aO
+                  event.preventDefault();
+                  applyDependentVowel(input, devanagariRef, dependentVowelMap[potentialSequence], cursorPosition);
+                  console.log(`Applied complex matra: ${dependentVowelMap[potentialSequence]}`);
+                  lastEffectiveKey = effectiveKey; // Handled sequence
+                  return;
+              } else if (!isDependentContext && independentVowelMap[potentialSequence]) {
+                  // Insert complex independent vowel like RRi, RRI, LLi, LLI, AE, AO
+                  event.preventDefault();
+                  insertCharacter(input, devanagariRef, independentVowelMap[potentialSequence], cursorPosition);
+                  console.log(`Inserted complex independent vowel: ${independentVowelMap[potentialSequence]}`);
+                  lastEffectiveKey = effectiveKey; // Handled sequence
+                  return;
+              } else {
+                   console.log(`Sequence ${potentialSequence} valid but context mismatch?`);
+                   // Fall through to single key handling maybe? Or block? Let's block for now.
+                   // event.preventDefault(); // Prevent default if sequence is valid but context wrong?
+                   // return;
               }
-
-
-             // 4. Default: Insert Independent Vowel
-             //    Handles start of input, after space, after full consonant, after different vowel
-             insertIndependentVowel(input, devanagariRef, indVowel, cursorPosition);
-             vowelHandled = true;
-             break; // Stop checking shorter vowels
+        }
+        // Add 3-char sequence checks if needed (e.g., Rri, LlI ?)
+        // Example: R + r + i = Rri (ृ)
+        // Need to track maybe last *two* keys, or check context more deeply
+        // Let's stick to 2-char for now for simplicity matching the maps provided.
+        // If a sequence like 'Rri' is hit, the combined map should handle it.
+    }
+  
+     // --- Vowel Replacement Check (based on single key press modifying previous vowel) ---
+     // This handles cases like typing 'i' after 'क' resulted in 'कि', then typing 'i' again.
+     if (potentialVowelKeys.has(effectiveKey) && charM1 && vowelReplacementMap[charM1]?.[effectiveKey]) {
+          event.preventDefault();
+          const replacementChar = vowelReplacementMap[charM1][effectiveKey];
+          replacePreviousChars(input, devanagariRef, 1, replacementChar, cursorPosition);
+          console.log(`Vowel Replacement (single key): ${charM1} + ${effectiveKey} -> ${replacementChar}`);
+          lastEffectiveKey = effectiveKey;
+          return;
+     }
+  
+  
+    // --- Single Vowel / Single Consonant Handling ---
+    const isDependentContext = charM1 === ZWNJ && charM2 === HALANT && cursorPosition >= 3;
+    const devanagariDependent = dependentVowelMap[effectiveKey];
+    const devanagariIndependent = independentVowelMap[effectiveKey];
+    const devanagariConsonant = singleConsonantMap[effectiveKey];
+  
+    if (isDependentContext) {
+        // Preceded by Consonant + Halant + ZWNJ
+        if (devanagariDependent) {
+            // Apply dependent vowel (matra)
+            event.preventDefault();
+            applyDependentVowel(input, devanagariRef, devanagariDependent, cursorPosition);
+            lastEffectiveKey = effectiveKey;
+            return;
+        } else if (devanagariConsonant) {
+            // Insert a new consonant after the previous one (forms conjunct implicitly)
+            // We need to REMOVE the ZWNJ first, then insert Consonant+Halant+ZWNJ
+            event.preventDefault();
+            replacePreviousChars(input, devanagariRef, 1, devanagariConsonant + HALANT + ZWNJ, cursorPosition);
+            console.log(`Forming conjunct: Removed ZWNJ, added ${devanagariConsonant}+H+ZWNJ`);
+            lastEffectiveKey = effectiveKey;
+            return;
+        } else if (devanagariIndependent) {
+             // Typing an independent vowel after C+H+ZWNJ? Unusual.
+             // Treat as error? Or remove H+ZWNJ and insert Independent vowel?
+             // Let's remove H+ZWNJ and insert the independent vowel.
+             event.preventDefault();
+             replacePreviousChars(input, devanagariRef, 2, devanagariIndependent, cursorPosition);
+             console.log(`WARN: Independent vowel after C+H+ZWNJ. Replaced H+ZWNJ with ${devanagariIndependent}`);
+             lastEffectiveKey = effectiveKey;
+             return;
+        }
+    } else {
+        // Not preceded by C+H+ZWNJ (e.g., start, after space, after vowel, after explicit halant)
+        if (devanagariIndependent) {
+            // Insert independent vowel
+            event.preventDefault();
+            insertCharacter(input, devanagariRef, devanagariIndependent, cursorPosition);
+            lastEffectiveKey = effectiveKey;
+            return;
+        } else if (devanagariConsonant) {
+             // Insert single consonant normally
+            event.preventDefault();
+            handleSingleConsonant(event, devanagariRef, devanagariConsonant); // Uses helpers internally now
+            lastEffectiveKey = effectiveKey;
+            return;
+        } else if (devanagariDependent) {
+            // Typing a matra without a preceding consonant?
+            // Maybe insert the standalone matra? Or dotted circle + matra? Or ignore?
+            // Let's insert dotted circle + matra for clarity.
+            event.preventDefault();
+            const standaloneMatra = '\u25CC' + devanagariDependent; // Dotted Circle
+            insertCharacter(input, devanagariRef, standaloneMatra, cursorPosition);
+            console.log(`WARN: Dependent vowel in independent context. Inserted ${standaloneMatra}`);
+            lastEffectiveKey = effectiveKey;
+            return;
         }
     }
-
-    if (vowelHandled) {
-        console.log("State AFTER processing (Vowel):");
-        logCharactersBeforeCursor(input);
-        return;
+  
+    // --- Handle 'h' as a single consonant if it didn't form a double/triple ---
+    // Refined check: If effectiveKey is 'h' and it wasn't handled above
+    if (effectiveKey === 'h' && !doubleMappings?.[charM3] && !tripleMappings?.[charM5+charM3]) {
+         // Use the logic from handleSingleConsonant to insert 'ह' + HALANT + ZWNJ
+         event.preventDefault();
+         handleSingleConsonant(event, devanagariRef, 'ह'); // 'ह' is the Devanagari for 'h'
+         lastEffectiveKey = effectiveKey;
+         return;
     }
-
-
+  
+  
     // --- Fallback ---
-    console.log(`Key "${key}" not handled by custom logic. Default behavior might occur.`);
+    console.log(`Key "${effectiveKey}" not handled by custom logic. Default behavior might occur.`);
+    lastEffectiveKey = effectiveKey; // Update last key even if default occurs
     queueMicrotask(() => {
-        if(input.value !== devanagariRef.value) { // Update ref only if default action caused change
-           devanagariRef.value = input.value;
-        }
-        logCharactersBeforeCursor(input); // Log state after potential default insertion
+        devanagariRef.value = input.value;
+        logCharactersBeforeCursor(input);
     });
-
-} // End of handleInput
+  }
